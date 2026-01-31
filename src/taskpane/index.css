@@ -113,6 +113,29 @@
   line-height: 1.5;
 }
 
+.markdown-content [data-streamdown="code-block"] {
+  margin: 0.5em 0;
+  border-radius: var(--chat-radius);
+  border-color: var(--chat-border);
+}
+
+.markdown-content [data-streamdown="code-block-header"] {
+  display: none;
+}
+
+.markdown-content [data-streamdown="code-block-body"] {
+  padding: 0.5em 0.75em;
+  font-size: 0.8125rem;
+}
+
+.markdown-content [data-streamdown="code-block-body"] code {
+  counter-reset: none !important;
+}
+
+.markdown-content [data-streamdown="code-block-body"] code > span::before {
+  display: none;
+}
+
 .markdown-content ul,
 .markdown-content ol {
   margin: 0.5em 0;

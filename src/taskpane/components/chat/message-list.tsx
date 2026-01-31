@@ -5,7 +5,7 @@ import { Streamdown } from "streamdown";
 import { type ChatMessage, type MessagePart, useChat } from "./chat-context";
 
 function ThinkingBlock({ thinking, isStreaming }: { thinking: string; isStreaming?: boolean }) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div className="mb-2 border border-(--chat-border) bg-(--chat-bg) rounded-sm overflow-hidden">
@@ -20,7 +20,7 @@ function ThinkingBlock({ thinking, isStreaming }: { thinking: string; isStreamin
         {isStreaming && <span className="animate-pulse ml-1">...</span>}
       </button>
       {isExpanded && (
-        <div className="px-2 py-1.5 text-xs text-(--chat-text-muted) whitespace-pre-wrap break-words border-t border-(--chat-border) max-h-40 overflow-y-auto">
+        <div className="px-2 py-1.5 text-xs text-(--chat-text-muted) whitespace-pre-wrap break-words border-t border-(--chat-border) max-h-20 overflow-y-auto">
           {thinking}
         </div>
       )}
@@ -57,20 +57,18 @@ function ToolCallBlock({ part }: { part: ToolCallPart }) {
         <div className="border-t border-(--chat-border)">
           <div className="px-2 py-1.5 text-xs">
             <div className="text-(--chat-text-muted) text-[10px] uppercase mb-1">args</div>
-            <pre className="text-(--chat-text-secondary) whitespace-pre-wrap break-words text-[11px]">
-              {JSON.stringify(part.args, null, 2)}
-            </pre>
+            <div className="markdown-content max-h-32 overflow-y-auto [&_[data-streamdown=code-block]]:my-0 [&_[data-streamdown=code-block]]:border-0">
+              <Streamdown plugins={{ code }}>{`\`\`\`json\n${JSON.stringify(part.args, null, 2)}\n\`\`\``}</Streamdown>
+            </div>
           </div>
           {part.result && (
             <div className="px-2 py-1.5 text-xs border-t border-(--chat-border)">
               <div className="text-(--chat-text-muted) text-[10px] uppercase mb-1">
                 {part.status === "error" ? "error" : "result"}
               </div>
-              <pre
-                className={`whitespace-pre-wrap break-words text-[11px] ${part.status === "error" ? "text-red-400" : "text-(--chat-text-secondary)"}`}
-              >
-                {part.result}
-              </pre>
+              <div className={`markdown-content max-h-40 overflow-y-auto [&_[data-streamdown=code-block]]:my-0 [&_[data-streamdown=code-block]]:border-0 ${part.status === "error" ? "[&_code]:!text-red-400" : ""}`}>
+                <Streamdown plugins={{ code }}>{`\`\`\`json\n${part.result}\n\`\`\``}</Streamdown>
+              </div>
             </div>
           )}
         </div>
@@ -194,9 +192,24 @@ function groupMessages(messages: ChatMessage[]): MessageGroup[] {
 export function MessageList() {
   const { state } = useChat();
   const containerRef = useRef<HTMLDivElement>(null);
+  const shouldAutoScroll = useRef(true);
 
   useEffect(() => {
-    if (containerRef.current) {
+    const container = containerRef.current;
+    if (!container) return undefined;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      shouldAutoScroll.current = distanceFromBottom < 100;
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    if (containerRef.current && shouldAutoScroll.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
   }, [state.messages, state.isStreaming]);
