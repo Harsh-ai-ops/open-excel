@@ -226,6 +226,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleAgentEvent = useCallback((event: AgentEvent) => {
+    console.log("[Chat] Agent event:", event.type, event);
     switch (event.type) {
       case "message_start": {
         if (event.message.role === "assistant") {
@@ -262,27 +263,39 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       case "message_end": {
         if (event.message.role === "assistant") {
           const assistantMsg = event.message as AssistantMessage;
+          const isError = assistantMsg.stopReason === "error" || assistantMsg.stopReason === "aborted";
+          console.log("[Chat] Assistant message result:", event.message);
+          console.log("[Chat] Usage:", assistantMsg.usage);
+          console.log("[Chat] stopReason:", assistantMsg.stopReason, "errorMessage:", assistantMsg.errorMessage);
+
           setState((prev) => {
-            const messages = [...prev.messages];
+            let messages = [...prev.messages];
             const idx = messages.findIndex((m) => m.id === streamingMessageIdRef.current);
-            if (idx !== -1) {
+
+            if (isError) {
+              if (idx !== -1) {
+                messages.splice(idx, 1);
+              }
+            } else if (idx !== -1) {
               const parts = extractPartsFromAssistantMessage(event.message, messages[idx].parts);
               messages[idx] = { ...messages[idx], parts };
             }
-            console.log("[Chat] Assistant message result:", event.message);
-            console.log("[Chat] Usage:", assistantMsg.usage);
+
             return {
               ...prev,
               messages,
-              sessionStats: {
-                inputTokens: prev.sessionStats.inputTokens + assistantMsg.usage.input,
-                outputTokens: prev.sessionStats.outputTokens + assistantMsg.usage.output,
-                cacheRead: prev.sessionStats.cacheRead + assistantMsg.usage.cacheRead,
-                cacheWrite: prev.sessionStats.cacheWrite + assistantMsg.usage.cacheWrite,
-                totalCost: prev.sessionStats.totalCost + assistantMsg.usage.cost.total,
-                contextWindow: prev.sessionStats.contextWindow,
-                lastUsage: assistantMsg.usage,
-              },
+              error: isError ? (assistantMsg.errorMessage || "Request failed") : prev.error,
+              sessionStats: isError
+                ? prev.sessionStats
+                : {
+                    inputTokens: prev.sessionStats.inputTokens + assistantMsg.usage.input,
+                    outputTokens: prev.sessionStats.outputTokens + assistantMsg.usage.output,
+                    cacheRead: prev.sessionStats.cacheRead + assistantMsg.usage.cacheRead,
+                    cacheWrite: prev.sessionStats.cacheWrite + assistantMsg.usage.cacheWrite,
+                    totalCost: prev.sessionStats.totalCost + assistantMsg.usage.cost.total,
+                    contextWindow: prev.sessionStats.contextWindow,
+                    lastUsage: assistantMsg.usage,
+                  },
             };
           });
           streamingMessageIdRef.current = null;
@@ -492,6 +505,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         await agent.prompt(promptContent);
         console.log("[Chat] Full context:", agent.state.messages);
       } catch (err) {
+        console.error("[Chat] sendMessage error:", err);
         isStreamingRef.current = false;
         setState((prev) => ({
           ...prev,

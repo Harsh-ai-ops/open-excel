@@ -1,4 +1,4 @@
-import { AlertCircle, Check, Eye, EyeOff } from "lucide-react";
+import { Check, Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { type ThinkingLevel, useChat } from "./chat-context";
 
@@ -222,13 +222,10 @@ export function SettingsPanel() {
           {isConfigured ? (
             <>
               <Check size={12} className="text-(--chat-success)" />
-              <span className="text-(--chat-text-secondary)">Connected to {state.providerConfig?.provider}</span>
+              <span className="text-(--chat-text-secondary)">Using {state.providerConfig?.provider}</span>
             </>
           ) : (
-            <>
-              <AlertCircle size={12} className="text-(--chat-text-muted)" />
-              <span className="text-(--chat-text-muted)">Not configured</span>
-            </>
+            <span className="text-(--chat-text-muted)">Fill in all fields above to get started</span>
           )}
         </div>
       </div>
