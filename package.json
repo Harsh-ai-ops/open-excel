@@ -13,6 +13,7 @@
   },
   "scripts": {
     "build": "webpack --mode production",
+    "deploy": "pnpm build && pnpm dlx wrangler pages deploy dist --project-name openexcel",
     "build:dev": "webpack --mode development",
     "dev-server": "webpack serve --mode development",
     "lint": "biome check src/",
