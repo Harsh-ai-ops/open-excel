@@ -473,15 +473,42 @@ export async function setCellRange(
     allowOverwrite?: boolean;
   } = {},
 ): Promise<SetCellRangeResult> {
-  const { copyToRange, resizeWidth, resizeHeight } = options;
+  const { copyToRange, resizeWidth, resizeHeight, allowOverwrite } = options;
 
   return Excel.run(async (context) => {
     const sheet = await getWorksheetById(context, sheetId);
     if (!sheet) throw new Error(`Worksheet with ID ${sheetId} not found`);
 
     const range = sheet.getRange(rangeAddr);
-    range.load("rowCount,columnCount");
+    range.load("rowCount,columnCount,values,formulas,address");
     await context.sync();
+
+    if (!allowOverwrite) {
+      const nonEmptyCells: string[] = [];
+      const { startCol, startRow } = parseRangeAddress(range.address);
+
+      for (let r = 0; r < range.rowCount; r++) {
+        for (let c = 0; c < range.columnCount; c++) {
+          const value = range.values[r][c];
+          const formula = range.formulas[r][c];
+          const hasValue = value !== null && value !== "" && value !== undefined;
+          const hasFormula = typeof formula === "string" && formula.startsWith("=");
+
+          if (hasValue || hasFormula) {
+            nonEmptyCells.push(cellAddress(startRow + r, startCol + c));
+          }
+        }
+      }
+
+      if (nonEmptyCells.length > 0) {
+        const cellList =
+          nonEmptyCells.length <= 10 ? nonEmptyCells.join(", ") : `${nonEmptyCells.slice(0, 10).join(", ")}...`;
+        throw new Error(
+          `Would overwrite ${nonEmptyCells.length} non-empty cell(s): ${cellList}. ` +
+            `To proceed with overwriting existing data, retry with allow_overwrite set to true.`,
+        );
+      }
+    }
 
     const values: unknown[][] = [];
     const formulas: (string | null)[][] = [];

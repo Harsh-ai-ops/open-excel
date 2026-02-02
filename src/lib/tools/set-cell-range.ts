@@ -58,8 +58,12 @@ export const setCellRangeTool = defineTool({
   name: "set_cell_range",
   label: "Set Cell Range",
   description:
-    "Write values, formulas, and formatting to cells. " +
+    "WRITE. Write values, formulas, and formatting to cells. " +
     "The cells array must match the range dimensions. " +
+    "OVERWRITE PROTECTION: By default, fails if target cells contain data. " +
+    "If the tool returns an overwrite error, read those cells to see what's there, " +
+    "confirm with the user, then retry with allow_overwrite=true. " +
+    "Only set allow_overwrite=true on first attempt if user explicitly says 'replace' or 'overwrite'. " +
     "Use copyToRange to expand a pattern to a larger area.",
   parameters: Type.Object({
     sheetId: Type.Number({ description: "The worksheet ID (1-based index)" }),
