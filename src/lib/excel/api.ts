@@ -776,10 +776,12 @@ export async function modifySheetStructure(
 }
 
 function letterToColumnIndex(letter: string): number {
-  return letter
-    .toUpperCase()
-    .split("")
-    .reduce((acc, c) => acc * 26 + c.charCodeAt(0) - 64, 0) - 1;
+  return (
+    letter
+      .toUpperCase()
+      .split("")
+      .reduce((acc, c) => acc * 26 + c.charCodeAt(0) - 64, 0) - 1
+  );
 }
 
 export interface ModifyWorkbookStructureResult {

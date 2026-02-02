@@ -269,7 +269,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           console.log("[Chat] stopReason:", assistantMsg.stopReason, "errorMessage:", assistantMsg.errorMessage);
 
           setState((prev) => {
-            let messages = [...prev.messages];
+            const messages = [...prev.messages];
             const idx = messages.findIndex((m) => m.id === streamingMessageIdRef.current);
 
             if (isError) {
@@ -284,7 +284,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             return {
               ...prev,
               messages,
-              error: isError ? (assistantMsg.errorMessage || "Request failed") : prev.error,
+              error: isError ? assistantMsg.errorMessage || "Request failed" : prev.error,
               sessionStats: isError
                 ? prev.sessionStats
                 : {
@@ -529,7 +529,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const refreshSessions = useCallback(async () => {
     if (!workbookIdRef.current) return;
     const sessions = await listSessions(workbookIdRef.current);
-    console.log("[Chat] refreshSessions:", sessions.map((s) => ({ id: s.id, name: s.name, msgs: s.messages.length })));
+    console.log(
+      "[Chat] refreshSessions:",
+      sessions.map((s) => ({ id: s.id, name: s.name, msgs: s.messages.length })),
+    );
     setState((prev) => ({ ...prev, sessions }));
   }, []);
 
@@ -561,36 +564,33 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshSessions]);
 
-  const switchSession = useCallback(
-    async (sessionId: string) => {
-      console.log("[Chat] switchSession called:", sessionId, "current:", currentSessionIdRef.current);
-      if (currentSessionIdRef.current === sessionId) return;
-      if (isStreamingRef.current) {
-        console.log("[Chat] switchSession blocked: streaming in progress");
+  const switchSession = useCallback(async (sessionId: string) => {
+    console.log("[Chat] switchSession called:", sessionId, "current:", currentSessionIdRef.current);
+    if (currentSessionIdRef.current === sessionId) return;
+    if (isStreamingRef.current) {
+      console.log("[Chat] switchSession blocked: streaming in progress");
+      return;
+    }
+    agentRef.current?.reset();
+    try {
+      const session = await getSession(sessionId);
+      console.log("[Chat] Got session:", session?.id, "messages:", session?.messages.length);
+      if (!session) {
+        console.error("[Chat] Session not found:", sessionId);
         return;
       }
-      agentRef.current?.reset();
-      try {
-        const session = await getSession(sessionId);
-        console.log("[Chat] Got session:", session?.id, "messages:", session?.messages.length);
-        if (!session) {
-          console.error("[Chat] Session not found:", sessionId);
-          return;
-        }
-        currentSessionIdRef.current = session.id;
-        setState((prev) => ({
-          ...prev,
-          messages: session.messages,
-          currentSession: session,
-          error: null,
-          sessionStats: INITIAL_STATS,
-        }));
-      } catch (err) {
-        console.error("[Chat] Failed to switch session:", err);
-      }
-    },
-    [],
-  );
+      currentSessionIdRef.current = session.id;
+      setState((prev) => ({
+        ...prev,
+        messages: session.messages,
+        currentSession: session,
+        error: null,
+        sessionStats: INITIAL_STATS,
+      }));
+    } catch (err) {
+      console.error("[Chat] Failed to switch session:", err);
+    }
+  }, []);
 
   const deleteCurrentSession = useCallback(async () => {
     if (!currentSessionIdRef.current || !workbookIdRef.current) return;

@@ -172,28 +172,27 @@ function SessionDropdown({ onSelect }: { onSelect: () => void }) {
               const isCurrent = session.id === state.currentSession?.id;
               const isDisabled = isStreaming && !isCurrent;
               return (
-                <div
+                <button
+                  type="button"
                   key={session.id}
+                  disabled={isDisabled}
                   className={`
-                    flex items-center justify-between px-3 py-2 text-xs transition-colors
+                    flex items-center justify-between px-3 py-2 text-xs transition-colors w-full text-left
                     ${isCurrent ? "bg-(--chat-bg-secondary)" : ""}
                     ${isDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-(--chat-bg-secondary)"}
                   `}
-                  onClick={() => !isDisabled && handleSwitch(session.id)}
-                  onKeyDown={(e) => e.key === "Enter" && !isDisabled && handleSwitch(session.id)}
+                  onClick={() => handleSwitch(session.id)}
                 >
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  {session.id === state.currentSession?.id ? (
-                    <Check size={12} className="text-(--chat-accent) shrink-0" />
-                  ) : (
-                    <div className="w-3 shrink-0" />
-                  )}
-                  <span className="truncate text-(--chat-text-primary)">{session.name}</span>
-                </div>
-                <span className="text-[10px] text-(--chat-text-muted) shrink-0 ml-2">
-                  {session.messages.length}
-                </span>
-              </div>
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    {session.id === state.currentSession?.id ? (
+                      <Check size={12} className="text-(--chat-accent) shrink-0" />
+                    ) : (
+                      <div className="w-3 shrink-0" />
+                    )}
+                    <span className="truncate text-(--chat-text-primary)">{session.name}</span>
+                  </div>
+                  <span className="text-[10px] text-(--chat-text-muted) shrink-0 ml-2">{session.messages.length}</span>
+                </button>
               );
             })}
           </div>
