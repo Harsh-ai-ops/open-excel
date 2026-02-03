@@ -60,6 +60,27 @@ function excelColorToHex(color: Excel.RangeFont | Excel.RangeFill): string | und
   return c.color;
 }
 
+async function getPointsPerStandardColumnWidth(context: Excel.RequestContext, sheet: Excel.Worksheet): Promise<number> {
+  const probe = sheet.getRange("XFD:XFD");
+  probe.format.load("columnWidth");
+  sheet.load("standardWidth");
+  await context.sync();
+
+  const originalWidth = probe.format.columnWidth;
+  probe.format.useStandardWidth = true;
+  probe.format.load("columnWidth");
+  await context.sync();
+
+  const standardWidthPoints = probe.format.columnWidth;
+  probe.format.columnWidth = originalWidth;
+  await context.sync();
+
+  if (sheet.standardWidth && standardWidthPoints) {
+    return standardWidthPoints / sheet.standardWidth;
+  }
+  return 1;
+}
+
 export async function getWorksheetById(
   context: Excel.RequestContext,
   sheetId: number,
@@ -121,13 +142,6 @@ export async function getCellRanges(
 
       const range = sheet.getRange(rangeAddr);
       range.load("values,formulas,address,rowCount,columnCount");
-
-      if (includeStyles) {
-        range.load("format/font,format/fill");
-        range.format.font.load("name,size,color,bold,italic");
-        range.format.fill.load("color");
-      }
-
       await context.sync();
 
       const startAddress = range.address.split("!")[1]?.split(":")[0] || "A1";
@@ -136,6 +150,8 @@ export async function getCellRanges(
         ? startMatch[1].split("").reduce((acc, c) => acc * 26 + c.charCodeAt(0) - 64, 0) - 1
         : 0;
       const startRow = startMatch ? Number.parseInt(startMatch[2], 10) - 1 : 0;
+
+      const styleTargetsMap = new Map<string, Excel.Range>();
 
       for (let r = 0; r < range.rowCount && totalCells < cellLimit; r++) {
         for (let c = 0; c < range.columnCount && totalCells < cellLimit; c++) {
@@ -146,32 +162,47 @@ export async function getCellRanges(
           if (value !== null && value !== "" && value !== undefined) {
             cells[addr] = value as string | number | boolean;
             totalCells++;
+            if (includeStyles) {
+              styleTargetsMap.set(addr, range.getCell(r, c));
+            }
           }
 
           if (typeof formula === "string" && formula.startsWith("=")) {
             formulas[addr] = formula;
+            if (includeStyles) {
+              styleTargetsMap.set(addr, range.getCell(r, c));
+            }
           }
         }
       }
 
-      if (includeStyles && range.format) {
-        const rangeStyle: CellStyle = {};
-        const font = range.format.font;
-        const fill = range.format.fill;
+      if (includeStyles && styleTargetsMap.size > 0) {
+        const styleTargets = Array.from(styleTargetsMap.entries());
+        for (const [, cell] of styleTargets) {
+          cell.format.font.load("name,size,color,bold,italic");
+          cell.format.fill.load("color");
+        }
+        await context.sync();
 
-        if (font.size) rangeStyle.sz = font.size;
-        if (font.name) rangeStyle.family = font.name;
-        if (font.bold) rangeStyle.bold = font.bold;
-        if (font.italic) rangeStyle.italic = font.italic;
+        for (const [addr, cell] of styleTargets) {
+          const rangeStyle: CellStyle = {};
+          const font = cell.format.font;
+          const fill = cell.format.fill;
 
-        const fontColor = excelColorToHex(font as Excel.RangeFont);
-        if (fontColor) rangeStyle.color = fontColor;
+          if (font.size) rangeStyle.sz = font.size;
+          if (font.name) rangeStyle.family = font.name;
+          if (font.bold !== null && font.bold !== undefined) rangeStyle.bold = font.bold;
+          if (font.italic !== null && font.italic !== undefined) rangeStyle.italic = font.italic;
 
-        const fillColor = excelColorToHex(fill as Excel.RangeFill);
-        if (fillColor) rangeStyle.fgColor = fillColor;
+          const fontColor = excelColorToHex(font as Excel.RangeFont);
+          if (fontColor) rangeStyle.color = fontColor;
 
-        if (Object.keys(rangeStyle).length > 0) {
-          styles[rangeAddr] = rangeStyle;
+          const fillColor = excelColorToHex(fill as Excel.RangeFill);
+          if (fillColor) rangeStyle.fgColor = fillColor;
+
+          if (Object.keys(rangeStyle).length > 0) {
+            styles[addr] = rangeStyle;
+          }
         }
       }
     }
@@ -546,9 +577,18 @@ export async function setCellRange(
         if (cell.cellStyles) {
           const s = cell.cellStyles;
           if (s.fontWeight === "bold") cellRange.format.font.bold = true;
+          if (s.fontWeight === "normal") cellRange.format.font.bold = false;
           if (s.fontStyle === "italic") cellRange.format.font.italic = true;
+          if (s.fontStyle === "normal") cellRange.format.font.italic = false;
           if (s.fontLine === "underline") cellRange.format.font.underline = "Single";
-          if (s.fontLine === "line-through") cellRange.format.font.strikethrough = true;
+          if (s.fontLine === "line-through") {
+            cellRange.format.font.strikethrough = true;
+            cellRange.format.font.underline = "None";
+          }
+          if (s.fontLine === "none") {
+            cellRange.format.font.strikethrough = false;
+            cellRange.format.font.underline = "None";
+          }
           if (s.fontSize) cellRange.format.font.size = s.fontSize;
           if (s.fontFamily) cellRange.format.font.name = s.fontFamily;
           if (s.fontColor) cellRange.format.font.color = s.fontColor;
@@ -613,7 +653,12 @@ export async function setCellRange(
 
     if (resizeWidth) {
       const cols = range.getEntireColumn();
-      cols.format.columnWidth = resizeWidth.value;
+      if (resizeWidth.type === "standard") {
+        const pointsPerStandard = await getPointsPerStandardColumnWidth(context, sheet);
+        cols.format.columnWidth = resizeWidth.value * pointsPerStandard;
+      } else {
+        cols.format.columnWidth = resizeWidth.value;
+      }
     }
     if (resizeHeight) {
       const rows = range.getEntireRow();
@@ -860,11 +905,16 @@ export async function resizeRange(
     const sheet = await getWorksheetById(context, sheetId);
     if (!sheet) throw new Error(`Worksheet with ID ${sheetId} not found`);
 
-    const targetRange = range ? sheet.getRange(range) : sheet.getUsedRange();
+    const targetRange = range ? sheet.getRange(range) : sheet.getRange();
 
     if (width) {
       const cols = targetRange.getEntireColumn();
-      cols.format.columnWidth = width.value;
+      if (width.type === "standard") {
+        const pointsPerStandard = await getPointsPerStandardColumnWidth(context, sheet);
+        cols.format.columnWidth = width.value * pointsPerStandard;
+      } else {
+        cols.format.columnWidth = width.value;
+      }
     }
     if (height) {
       const rows = targetRange.getEntireRow();
@@ -992,6 +1042,80 @@ export async function getWorkbookMetadata(): Promise<WorkbookMetadata> {
   });
 }
 
+async function clearRowColumnAxis(
+  context: Excel.RequestContext,
+  axis: Excel.RowColumnPivotHierarchyCollection,
+): Promise<void> {
+  axis.load("items");
+  await context.sync();
+  for (const item of axis.items) {
+    axis.remove(item);
+  }
+}
+
+async function clearDataAxis(context: Excel.RequestContext, axis: Excel.DataPivotHierarchyCollection): Promise<void> {
+  axis.load("items");
+  await context.sync();
+  for (const item of axis.items) {
+    axis.remove(item);
+  }
+}
+
+async function applyPivotFields(
+  context: Excel.RequestContext,
+  pivot: Excel.PivotTable,
+  properties: {
+    rows?: { field: string }[];
+    columns?: { field: string }[];
+    values?: { field: string; summarizeBy?: string }[];
+  },
+  clearExisting = false,
+): Promise<void> {
+  if (clearExisting) {
+    if (properties.rows) {
+      await clearRowColumnAxis(context, pivot.rowHierarchies);
+    }
+    if (properties.columns) {
+      await clearRowColumnAxis(context, pivot.columnHierarchies);
+    }
+    if (properties.values) {
+      await clearDataAxis(context, pivot.dataHierarchies);
+    }
+    await context.sync();
+  }
+
+  if (properties.rows) {
+    for (const row of properties.rows) {
+      const hierarchy = pivot.hierarchies.getItem(row.field);
+      pivot.rowHierarchies.add(hierarchy);
+    }
+  }
+
+  if (properties.columns) {
+    for (const column of properties.columns) {
+      const hierarchy = pivot.hierarchies.getItem(column.field);
+      pivot.columnHierarchies.add(hierarchy);
+    }
+  }
+
+  if (properties.values) {
+    const summarizeMap: Record<string, Excel.AggregationFunction> = {
+      sum: Excel.AggregationFunction.sum,
+      count: Excel.AggregationFunction.count,
+      average: Excel.AggregationFunction.average,
+      max: Excel.AggregationFunction.max,
+      min: Excel.AggregationFunction.min,
+    };
+    for (const value of properties.values) {
+      const hierarchy = pivot.hierarchies.getItem(value.field);
+      const dataHierarchy = pivot.dataHierarchies.add(hierarchy);
+      if (value.summarizeBy) {
+        dataHierarchy.summarizeBy = summarizeMap[value.summarizeBy] ?? Excel.AggregationFunction.sum;
+      }
+    }
+  }
+}
+
 export async function modifyObject(params: {
   operation: "create" | "update" | "delete";
   sheetId: number;
@@ -1037,6 +1161,17 @@ export async function modifyObject(params: {
         case "update": {
           if (!id) throw new Error("Chart update requires id");
           const chart = charts.getItem(id);
+          if (properties?.chartType) {
+            chart.chartType = properties.chartType as Excel.ChartType;
+          }
+          if (properties?.source) {
+            const sourceRange = sheet.getRange(properties.source);
+            chart.setData(sourceRange, Excel.ChartSeriesBy.auto);
+          }
+          if (properties?.anchor) {
+            const anchorCell = sheet.getRange(properties.anchor);
+            chart.setPosition(anchorCell);
+          }
           if (properties?.title) chart.title.text = properties.title;
           await context.sync();
           return { success: true, operation, id };
@@ -1059,9 +1194,10 @@ export async function modifyObject(params: {
           }
           const sourceRange = sheet.getRange(properties.source);
           const destRange = sheet.getRange(properties.range);
-          const pivot = context.workbook.worksheets
-            .getActiveWorksheet()
-            .pivotTables.add(properties.name || "PivotTable", sourceRange, destRange);
+          const pivot = sheet.pivotTables.add(properties.name || "PivotTable", sourceRange, destRange);
+          if (properties?.rows || properties?.columns || properties?.values) {
+            await applyPivotFields(context, pivot, properties);
+          }
           pivot.load("id");
           await context.sync();
           return { success: true, operation, id: pivot.id };
@@ -1070,6 +1206,9 @@ export async function modifyObject(params: {
           if (!id) throw new Error("PivotTable update requires id");
           const pivot = pivotTables.getItem(id);
           if (properties?.name) pivot.name = properties.name;
+          if (properties?.rows || properties?.columns || properties?.values) {
+            await applyPivotFields(context, pivot, properties, true);
+          }
           await context.sync();
           return { success: true, operation, id };
         }
