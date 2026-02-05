@@ -48,20 +48,18 @@ function parseDirtyRanges(result: string | undefined): DirtyRange[] | null {
 
 function DirtyRangeLink({ range }: { range: DirtyRange }) {
   const { getSheetName } = useChat();
-  const isNavigable = range.sheetId > 0; // sheetId -1 means unknown
-  const sheetDisplay = getSheetName(range.sheetId) || `Sheet ${range.sheetId}`;
-  const label =
-    range.sheetId < 0
-      ? range.range === "*"
-        ? "Unknown sheet"
-        : `Unknown!${range.range}`
-      : range.range === "*"
-        ? `${sheetDisplay} (all)`
-        : `${sheetDisplay}!${range.range}`;
+  const sheetName = getSheetName(range.sheetId);
 
-  if (!isNavigable) {
+  if (range.sheetId < 0) {
+    const label = range.range === "*" ? "Unknown sheet" : `Unknown!${range.range}`;
     return <span className="text-(--chat-warning-muted)">{label}</span>;
   }
+
+  if (!sheetName) {
+    return null;
+  }
+
+  const label = range.range === "*" ? `${sheetName} (all)` : `${sheetName}!${range.range}`;
 
   return (
     <button
@@ -81,11 +79,16 @@ function DirtyRangeLink({ range }: { range: DirtyRange }) {
 }
 
 function DirtyRangeLinks({ ranges }: { ranges: DirtyRange[] }) {
+  const { getSheetName } = useChat();
   const merged = useMemo(() => mergeRanges(ranges), [ranges]);
+
+  const validRanges = merged.filter((r) => r.sheetId < 0 || getSheetName(r.sheetId));
+
+  if (validRanges.length === 0) return null;
 
   return (
     <>
-      {merged.map((r, i) => (
+      {validRanges.map((r, i) => (
         <span key={`${r.sheetId}-${r.range}`}>
           {i > 0 && <span className="text-(--chat-warning-muted)">, </span>}
           <DirtyRangeLink range={r} />
@@ -96,32 +99,45 @@ function DirtyRangeLinks({ ranges }: { ranges: DirtyRange[] }) {
 }
 
 function DirtyRangeSummary({ ranges }: { ranges: DirtyRange[] }) {
-  const { getSheetName } = useChat();
+  const { getSheetName, state } = useChat();
   const merged = useMemo(() => mergeRanges(ranges), [ranges]);
+
+  console.log("[DirtyRangeSummary] sheetNames map:", state.sheetNames);
+  console.log("[DirtyRangeSummary] merged ranges:", merged);
 
   if (merged.length === 0) return null;
 
-  const formatBrief = (range: DirtyRange): string => {
+  const formatBrief = (range: DirtyRange): string | null => {
     if (range.sheetId < 0) return range.range === "*" ? "unknown" : range.range;
-    const sheetDisplay = getSheetName(range.sheetId) || `Sheet ${range.sheetId}`;
-    if (range.range === "*") return sheetDisplay;
+    const sheetName = getSheetName(range.sheetId);
+    console.log(`[DirtyRangeSummary] sheetId=${range.sheetId} -> sheetName=${sheetName}`);
+    if (!sheetName) return null;
+    if (range.range === "*") return sheetName;
     return `${range.range}`;
   };
 
   if (merged.length === 1) {
-    return <span className="text-[10px] text-(--chat-warning) truncate">→ {formatBrief(merged[0])}</span>;
+    const brief = formatBrief(merged[0]);
+    if (!brief) return null;
+    return <span className="text-[10px] text-(--chat-warning) truncate">→ {brief}</span>;
   }
 
-  // Multiple ranges - show count
-  return <span className="text-[10px] text-(--chat-warning)">→ {merged.length} ranges</span>;
+  const validRanges = merged.filter((r) => r.sheetId < 0 || getSheetName(r.sheetId));
+  if (validRanges.length === 0) return null;
+
+  return <span className="text-[10px] text-(--chat-warning)">→ {validRanges.length} ranges</span>;
 }
 
 function ToolCallBlock({ part }: { part: ToolCallPart }) {
+  const { getSheetName } = useChat();
   const [isExpanded, setIsExpanded] = useState(false);
   const explanation = (part.args as { explanation?: string })?.explanation;
 
   const dirtyRanges = useMemo(() => parseDirtyRanges(part.result), [part.result]);
-  const hasDirtyRanges = dirtyRanges && dirtyRanges.length > 0;
+  const hasValidDirtyRanges = useMemo(() => {
+    if (!dirtyRanges || dirtyRanges.length === 0) return false;
+    return dirtyRanges.some((r) => r.sheetId < 0 || getSheetName(r.sheetId));
+  }, [dirtyRanges, getSheetName]);
 
   const statusIcon = {
     pending: <Loader2 size={10} className="animate-spin text-(--chat-text-muted)" />,
@@ -140,7 +156,7 @@ function ToolCallBlock({ part }: { part: ToolCallPart }) {
         {isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
         <Wrench size={10} />
         <span className="flex-1 text-left font-medium truncate">{explanation || part.name}</span>
-        {hasDirtyRanges && !isExpanded && (
+        {hasValidDirtyRanges && !isExpanded && (
           <span className="flex items-center gap-1.5 text-(--chat-warning) shrink-0" title="Modified cells">
             <Edit3 size={9} />
             <DirtyRangeSummary ranges={dirtyRanges} />
@@ -150,7 +166,7 @@ function ToolCallBlock({ part }: { part: ToolCallPart }) {
       </button>
       {isExpanded && (
         <div className="border-t border-(--chat-border)">
-          {hasDirtyRanges && (
+          {hasValidDirtyRanges && (
             <div className="px-2 py-1 text-[10px] bg-(--chat-warning-bg) text-(--chat-warning) flex items-center gap-1 flex-wrap">
               <Edit3 size={9} className="shrink-0" />
               <span className="shrink-0">Modified:</span>
