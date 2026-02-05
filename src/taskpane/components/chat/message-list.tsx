@@ -1,8 +1,9 @@
 import { code } from "@streamdown/code";
-import { Brain, CheckCircle2, ChevronDown, ChevronRight, Loader2, Wrench, XCircle } from "lucide-react";
+import { Brain, CheckCircle2, ChevronDown, ChevronRight, Edit3, Loader2, Wrench, XCircle } from "lucide-react";
 import type { AnchorHTMLAttributes } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
+import { type DirtyRange, mergeRanges } from "../../../lib/dirty-tracker";
 import { navigateTo } from "../../../lib/excel/api";
 import { type ChatMessage, type MessagePart, useChat } from "./chat-context";
 
@@ -22,7 +23,7 @@ function ThinkingBlock({ thinking, isStreaming }: { thinking: string; isStreamin
         {isStreaming && <span className="animate-pulse ml-1">...</span>}
       </button>
       {isExpanded && (
-        <div className="px-2 py-1.5 text-xs text-(--chat-text-muted) whitespace-pre-wrap break-words border-t border-(--chat-border) max-h-20 overflow-y-auto">
+        <div className="px-2 py-1.5 text-xs text-(--chat-text-muted) whitespace-pre-wrap wrap-break-word border-t border-(--chat-border) max-h-20 overflow-y-auto">
           {thinking}
         </div>
       )}
@@ -32,9 +33,99 @@ function ThinkingBlock({ thinking, isStreaming }: { thinking: string; isStreamin
 
 type ToolCallPart = Extract<MessagePart, { type: "toolCall" }>;
 
+function parseDirtyRanges(result: string | undefined): DirtyRange[] | null {
+  if (!result) return null;
+  try {
+    const parsed = JSON.parse(result);
+    if (parsed._dirtyRanges && Array.isArray(parsed._dirtyRanges)) {
+      return parsed._dirtyRanges;
+    }
+  } catch {
+    // Not valid JSON or no dirty ranges
+  }
+  return null;
+}
+
+function DirtyRangeLink({ range }: { range: DirtyRange }) {
+  const isNavigable = range.sheetId > 0; // sheetId -1 means unknown
+  const label =
+    range.sheetId < 0
+      ? range.range === "*"
+        ? "Unknown sheet"
+        : `Unknown!${range.range}`
+      : range.range === "*"
+        ? `Sheet ${range.sheetId} (all)`
+        : `Sheet ${range.sheetId}!${range.range}`;
+
+  if (!isNavigable) {
+    return <span className="text-(--chat-warning-muted)">{label}</span>;
+  }
+
+  return (
+    <button
+      type="button"
+      className="text-(--chat-warning) hover:underline cursor-pointer"
+      onClick={(e) => {
+        e.stopPropagation();
+        const navRange = range.range === "*" ? undefined : range.range;
+        navigateTo(range.sheetId, navRange).catch((err) => {
+          console.error("[DirtyRange] Navigation failed:", err);
+        });
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function DirtyRangeLinks({ ranges }: { ranges: DirtyRange[] }) {
+  const merged = useMemo(() => mergeRanges(ranges), [ranges]);
+
+  return (
+    <>
+      {merged.map((r, i) => (
+        <span key={`${r.sheetId}-${r.range}`}>
+          {i > 0 && <span className="text-(--chat-warning-muted)">, </span>}
+          <DirtyRangeLink range={r} />
+        </span>
+      ))}
+    </>
+  );
+}
+
+function formatRangeBrief(range: DirtyRange): string {
+  if (range.sheetId < 0) return range.range === "*" ? "unknown" : range.range;
+  if (range.range === "*") return `Sheet ${range.sheetId}`;
+  return `${range.range}`;
+}
+
+function DirtyRangeSummary({ ranges }: { ranges: DirtyRange[] }) {
+  const merged = useMemo(() => mergeRanges(ranges), [ranges]);
+
+  if (merged.length === 0) return null;
+
+  if (merged.length === 1) {
+    return (
+      <span className="text-[10px] text-(--chat-warning) truncate">
+        → {formatRangeBrief(merged[0])}
+      </span>
+    );
+  }
+
+  // Multiple ranges - show count
+  return (
+    <span className="text-[10px] text-(--chat-warning)">
+      → {merged.length} ranges
+    </span>
+  );
+}
+
 function ToolCallBlock({ part }: { part: ToolCallPart }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const explanation = (part.args as { explanation?: string })?.explanation;
+
+  const dirtyRanges = useMemo(() => parseDirtyRanges(part.result), [part.result]);
+  const hasDirtyRanges = dirtyRanges && dirtyRanges.length > 0;
 
   const statusIcon = {
     pending: <Loader2 size={10} className="animate-spin text-(--chat-text-muted)" />,
@@ -52,14 +143,27 @@ function ToolCallBlock({ part }: { part: ToolCallPart }) {
       >
         {isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
         <Wrench size={10} />
-        <span className="flex-1 text-left font-medium">{explanation || part.name}</span>
+        <span className="flex-1 text-left font-medium truncate">{explanation || part.name}</span>
+        {hasDirtyRanges && !isExpanded && (
+          <span className="flex items-center gap-1.5 text-(--chat-warning) shrink-0" title="Modified cells">
+            <Edit3 size={9} />
+            <DirtyRangeSummary ranges={dirtyRanges} />
+          </span>
+        )}
         {statusIcon}
       </button>
       {isExpanded && (
         <div className="border-t border-(--chat-border)">
+          {hasDirtyRanges && (
+            <div className="px-2 py-1 text-[10px] bg-(--chat-warning-bg) text-(--chat-warning) flex items-center gap-1 flex-wrap">
+              <Edit3 size={9} className="shrink-0" />
+              <span className="shrink-0">Modified:</span>
+              <DirtyRangeLinks ranges={dirtyRanges} />
+            </div>
+          )}
           <div className="px-2 py-1.5 text-xs">
             <div className="text-(--chat-text-muted) text-[10px] uppercase mb-1">args</div>
-            <div className="markdown-content max-h-32 overflow-y-auto [&_[data-streamdown=code-block]]:my-0 [&_[data-streamdown=code-block]]:border-0">
+            <div className="markdown-content max-h-32 overflow-y-auto **:data-[streamdown=code-block]:my-0 **:data-[streamdown=code-block]:border-0">
               <Streamdown plugins={{ code }}>{`\`\`\`json\n${JSON.stringify(part.args, null, 2)}\n\`\`\``}</Streamdown>
             </div>
           </div>
@@ -69,7 +173,7 @@ function ToolCallBlock({ part }: { part: ToolCallPart }) {
                 {part.status === "error" ? "error" : "result"}
               </div>
               <div
-                className={`markdown-content max-h-40 overflow-y-auto [&_[data-streamdown=code-block]]:my-0 [&_[data-streamdown=code-block]]:border-0 ${part.status === "error" ? "[&_code]:!text-red-400" : ""}`}
+                className={`markdown-content max-h-40 overflow-y-auto **:data-[streamdown=code-block]:my-0 **:data-[streamdown=code-block]:border-0 ${part.status === "error" ? "[&_code]:text-red-400!" : ""}`}
               >
                 <Streamdown plugins={{ code }}>{`\`\`\`json\n${part.result}\n\`\`\``}</Streamdown>
               </div>

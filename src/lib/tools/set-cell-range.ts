@@ -82,6 +82,15 @@ export const setCellRangeTool = defineTool({
       }),
     ),
   }),
+  dirtyTracking: {
+    getRanges: (p) => {
+      const ranges = [{ sheetId: p.sheetId, range: p.range }];
+      if (p.copyToRange) {
+        ranges.push({ sheetId: p.sheetId, range: p.copyToRange });
+      }
+      return ranges;
+    },
+  },
   execute: async (_toolCallId, params) => {
     try {
       const result = await setCellRange(params.sheetId, params.range, params.cells, {

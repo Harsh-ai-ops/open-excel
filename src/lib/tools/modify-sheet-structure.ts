@@ -6,7 +6,7 @@ export const modifySheetStructureTool = defineTool({
   name: "modify_sheet_structure",
   label: "Modify Sheet Structure",
   description:
-    "Insert, delete, hide, or freeze rows and columns. " + "Use reference like '5' for row 5 or 'C' for column C.",
+    "Insert, delete, hide, or freeze rows and columns. Use reference like '5' for row 5 or 'C' for column C.",
   parameters: Type.Object({
     sheetId: Type.Number({ description: "The worksheet ID (1-based index)" }),
     operation: Type.Union(
@@ -37,6 +37,9 @@ export const modifySheetStructureTool = defineTool({
       }),
     ),
   }),
+  dirtyTracking: {
+    getRanges: (p) => [{ sheetId: p.sheetId, range: "*" }],
+  },
   execute: async (_toolCallId, params) => {
     try {
       const result = await modifySheetStructure(params.sheetId, {

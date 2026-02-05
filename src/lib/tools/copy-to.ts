@@ -20,6 +20,9 @@ export const copyToTool = defineTool({
       }),
     ),
   }),
+  dirtyTracking: {
+    getRanges: (p) => [{ sheetId: p.sheetId, range: p.destinationRange }],
+  },
   execute: async (_toolCallId, params) => {
     try {
       const result = await copyTo(params.sheetId, params.sourceRange, params.destinationRange);

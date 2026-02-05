@@ -23,6 +23,9 @@ export const clearCellRangeTool = defineTool({
       }),
     ),
   }),
+  dirtyTracking: {
+    getRanges: (p) => [{ sheetId: p.sheetId, range: p.range }],
+  },
   execute: async (_toolCallId, params) => {
     try {
       const result = await clearCellRange(params.sheetId, params.range, params.clearType);

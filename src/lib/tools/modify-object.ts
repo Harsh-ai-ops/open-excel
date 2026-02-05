@@ -59,6 +59,9 @@ export const modifyObjectTool = defineTool({
       }),
     ),
   }),
+  dirtyTracking: {
+    getRanges: (p) => [{ sheetId: p.sheetId, range: p.properties?.range || p.properties?.anchor || "*" }],
+  },
   execute: async (_toolCallId, params) => {
     try {
       const result = await modifyObject({

@@ -22,6 +22,15 @@ export const modifyWorkbookStructureTool = defineTool({
       }),
     ),
   }),
+  dirtyTracking: {
+    getRanges: (p, result) => {
+      if (p.operation === "create" || p.operation === "duplicate") {
+        const r = result as { sheetId?: number };
+        return r?.sheetId ? [{ sheetId: r.sheetId, range: "*" }] : [];
+      }
+      return p.sheetId ? [{ sheetId: p.sheetId, range: "*" }] : [];
+    },
+  },
   execute: async (_toolCallId, params) => {
     try {
       const result = await modifyWorkbookStructure({
