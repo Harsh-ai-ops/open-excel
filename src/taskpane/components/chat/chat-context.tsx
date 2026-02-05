@@ -15,7 +15,8 @@ import {
 } from "@mariozechner/pi-ai";
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { getWorkbookMetadata } from "../../../lib/excel/api";
+import type { DirtyRange } from "../../../lib/dirty-tracker";
+import { getWorkbookMetadata, navigateTo } from "../../../lib/excel/api";
 import {
   type ChatSession,
   createSession,
@@ -58,6 +59,7 @@ export interface ProviderConfig {
   useProxy: boolean;
   proxyUrl: string;
   thinking: ThinkingLevel;
+  followMode: boolean;
 }
 
 export interface SessionStats {
@@ -80,9 +82,25 @@ function loadSavedConfig(): ProviderConfig | null {
       if (config.proxyUrl === undefined) {
         config.proxyUrl = "";
       }
+      if (config.followMode === undefined) {
+        config.followMode = true; // Default to on
+      }
       return config;
     }
   } catch {}
+  return null;
+}
+
+function parseDirtyRanges(result: string | undefined): DirtyRange[] | null {
+  if (!result) return null;
+  try {
+    const parsed = JSON.parse(result);
+    if (parsed._dirtyRanges && Array.isArray(parsed._dirtyRanges)) {
+      return parsed._dirtyRanges;
+    }
+  } catch {
+    // Not valid JSON or no dirty ranges
+  }
   return null;
 }
 
@@ -127,6 +145,7 @@ interface ChatContextValue {
   switchSession: (sessionId: string) => Promise<void>;
   deleteCurrentSession: () => Promise<void>;
   getSheetName: (sheetId: number) => string | undefined;
+  toggleFollowMode: () => void;
 }
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -217,6 +236,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const workbookIdRef = useRef<string | null>(null);
   const sessionLoadedRef = useRef(false);
   const currentSessionIdRef = useRef<string | null>(null);
+  const followModeRef = useRef(state.providerConfig?.followMode ?? true);
 
   const availableProviders = getProviders();
 
@@ -357,6 +377,35 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         break;
       }
       case "tool_execution_end": {
+        let resultText: string;
+        if (typeof event.result === "string") {
+          resultText = event.result;
+        } else if (event.result?.content && Array.isArray(event.result.content)) {
+          resultText = event.result.content
+            .filter((c: { type: string }) => c.type === "text")
+            .map((c: { text: string }) => c.text)
+            .join("\n");
+        } else {
+          resultText = JSON.stringify(event.result, null, 2);
+        }
+
+        if (!event.isError && followModeRef.current) {
+          const dirtyRanges = parseDirtyRanges(resultText);
+          if (dirtyRanges && dirtyRanges.length > 0) {
+            const first = dirtyRanges[0];
+            if (first.sheetId >= 0 && first.range !== "*") {
+              navigateTo(first.sheetId, first.range).catch((err) => {
+                console.error("[FollowMode] Navigation failed:", err);
+              });
+            } else if (first.sheetId >= 0) {
+              // For whole-sheet changes, just activate the sheet
+              navigateTo(first.sheetId).catch((err) => {
+                console.error("[FollowMode] Navigation failed:", err);
+              });
+            }
+          }
+        }
+
         setState((prev) => {
           const messages = [...prev.messages];
           for (let i = messages.length - 1; i >= 0; i--) {
@@ -366,17 +415,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               const parts = [...msg.parts];
               const part = parts[partIdx];
               if (part.type === "toolCall") {
-                let resultText: string;
-                if (typeof event.result === "string") {
-                  resultText = event.result;
-                } else if (event.result?.content && Array.isArray(event.result.content)) {
-                  resultText = event.result.content
-                    .filter((c: { type: string }) => c.type === "text")
-                    .map((c: { text: string }) => c.text)
-                    .join("\n");
-                } else {
-                  resultText = JSON.stringify(event.result, null, 2);
-                }
                 parts[partIdx] = { ...part, status: event.isError ? "error" : "complete", result: resultText };
                 messages[i] = { ...msg, parts };
               }
@@ -432,6 +470,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       agentRef.current = agent;
       agent.subscribe(handleAgentEvent);
       pendingConfigRef.current = null;
+
+      followModeRef.current = config.followMode ?? true;
 
       console.log("[Chat] Model info:", {
         id: baseModel.id,
@@ -682,6 +722,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [state.sheetNames],
   );
 
+  const toggleFollowMode = useCallback(() => {
+    setState((prev) => {
+      if (!prev.providerConfig) return prev;
+      const newFollowMode = !prev.providerConfig.followMode;
+      followModeRef.current = newFollowMode;
+      const newConfig = { ...prev.providerConfig, followMode: newFollowMode };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
+      return { ...prev, providerConfig: newConfig };
+    });
+  }, []);
+
   return (
     <ChatContext.Provider
       value={{
@@ -696,6 +747,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         switchSession,
         deleteCurrentSession,
         getSheetName,
+        toggleFollowMode,
       }}
     >
       {children}

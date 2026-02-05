@@ -1,4 +1,4 @@
-import { Check, ChevronDown, MessageSquare, Moon, Plus, Settings, Sun, Trash2 } from "lucide-react";
+import { Check, ChevronDown, Eye, EyeOff, MessageSquare, Moon, Plus, Settings, Sun, Trash2 } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { ChatProvider, useChat } from "./chat-context";
 import { ChatInput } from "./chat-input";
@@ -233,7 +233,8 @@ function ChatHeader({
   theme: Theme;
   onThemeToggle: () => void;
 }) {
-  const { clearMessages, state } = useChat();
+  const { clearMessages, state, toggleFollowMode } = useChat();
+  const followMode = state.providerConfig?.followMode ?? true;
 
   return (
     <div className="border-b border-(--chat-border) bg-(--chat-bg)">
@@ -253,6 +254,20 @@ function ChatHeader({
           </TabButton>
         </div>
         <div className="flex items-center">
+          {activeTab === "chat" && (
+            <button
+              type="button"
+              onClick={toggleFollowMode}
+              className={`p-1.5 transition-colors ${
+                followMode
+                  ? "text-(--chat-accent) hover:text-(--chat-text-primary)"
+                  : "text-(--chat-text-muted) hover:text-(--chat-text-primary)"
+              }`}
+              title={followMode ? "Follow mode: ON - Click to disable" : "Follow mode: OFF - Click to enable"}
+            >
+              {followMode ? <Eye size={14} /> : <EyeOff size={14} />}
+            </button>
+          )}
           <button
             type="button"
             onClick={onThemeToggle}

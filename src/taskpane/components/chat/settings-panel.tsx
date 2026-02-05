@@ -11,6 +11,7 @@ interface SavedConfig {
   useProxy: boolean;
   proxyUrl: string;
   thinking: ThinkingLevel;
+  followMode?: boolean;
 }
 
 function loadSavedConfig(): SavedConfig | null {
@@ -19,6 +20,7 @@ function loadSavedConfig(): SavedConfig | null {
     if (saved) {
       const config = JSON.parse(saved);
       if (config.proxyUrl === undefined) config.proxyUrl = "";
+      if (config.followMode === undefined) config.followMode = true;
       return config;
     }
   } catch {}
@@ -32,8 +34,12 @@ function saveConfig(
   useProxy: boolean,
   proxyUrl: string,
   thinking: ThinkingLevel,
+  followMode: boolean,
 ) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ provider, apiKey, model, useProxy, proxyUrl, thinking }));
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({ provider, apiKey, model, useProxy, proxyUrl, thinking, followMode }),
+  );
 }
 
 const THINKING_LEVELS: { value: ThinkingLevel; label: string }[] = [
@@ -55,12 +61,15 @@ export function SettingsPanel() {
   const [proxyUrl, setProxyUrl] = useState(() => saved?.proxyUrl || "");
   const [thinking, setThinking] = useState<ThinkingLevel>(() => saved?.thinking || "none");
 
+  // Preserve followMode from current state (managed via header toggle)
+  const followMode = state.providerConfig?.followMode ?? true;
+
   useEffect(() => {
     if (provider && apiKey && model) {
-      saveConfig(provider, apiKey, model, useProxy, proxyUrl, thinking);
-      setProviderConfig({ provider, apiKey, model, useProxy, proxyUrl, thinking });
+      saveConfig(provider, apiKey, model, useProxy, proxyUrl, thinking, followMode);
+      setProviderConfig({ provider, apiKey, model, useProxy, proxyUrl, thinking, followMode });
     }
-  }, [provider, apiKey, model, useProxy, proxyUrl, thinking, setProviderConfig]);
+  }, [provider, apiKey, model, useProxy, proxyUrl, thinking, followMode, setProviderConfig]);
 
   const models = provider ? getModelsForProvider(provider) : [];
 
