@@ -83,17 +83,22 @@ function parseCellAddress(addr: string): { col: number; row: number } | null {
 /**
  * Format dirty ranges for display in tool results.
  */
-export function formatDirtyRanges(ranges: DirtyRange[]): string {
+export function formatDirtyRanges(
+  ranges: DirtyRange[],
+  sheetNameLookup?: (sheetId: number) => string | undefined,
+): string {
   if (ranges.length === 0) return "";
 
   const merged = mergeRanges(ranges);
 
   return merged
     .map((r) => {
+      const sheetName = sheetNameLookup?.(r.sheetId);
+      const sheetDisplay = sheetName || `Sheet ${r.sheetId}`;
       if (r.range === "*") {
-        return `Sheet ${r.sheetId} (all)`;
+        return `${sheetDisplay} (all)`;
       }
-      return `Sheet ${r.sheetId}!${r.range}`;
+      return `${sheetDisplay}!${r.range}`;
     })
     .join(", ");
 }

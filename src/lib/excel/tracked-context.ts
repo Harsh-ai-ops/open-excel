@@ -1,6 +1,7 @@
 /* global Excel */
 
 import type { DirtyRange } from "../dirty-tracker";
+import { getStableSheetId } from "./sheet-id-map";
 
 /**
  * Creates a tracked Excel context that monitors mutations for dirty tracking.
@@ -37,30 +38,17 @@ export function createTrackedContext(context: Excel.RequestContext): TrackedCont
   };
 
   // Called after each context.sync() to resolve pending sheet IDs
-  const resolvePendingSheetIds = async () => {
+  const resolvePendingSheetRefs = async () => {
     if (pendingSheetRefs.length === 0) return;
-
-    // Get all worksheets to find indices
-    const worksheets = context.workbook.worksheets;
-    worksheets.load("items");
-    await context.sync();
 
     for (const pending of pendingSheetRefs) {
       if (pending.sheetIdRef.id !== -1) continue; // Already resolved
 
       try {
-        // Find the 1-based index of this sheet in the worksheets collection
-        for (let i = 0; i < worksheets.items.length; i++) {
-          worksheets.items[i].load("id");
-        }
+        // Get the stable ID for this sheet (persisted in document settings)
+        pending.sheet.load("id");
         await context.sync();
-
-        for (let i = 0; i < worksheets.items.length; i++) {
-          if (worksheets.items[i].id === pending.sheet.id) {
-            pending.sheetIdRef.id = i + 1; // Use 1-based index
-            break;
-          }
-        }
+        pending.sheetIdRef.id = await getStableSheetId(pending.sheet.id);
       } catch {
         // Failed to resolve, will remain -1
       }
@@ -377,7 +365,7 @@ export function createTrackedContext(context: Excel.RequestContext): TrackedCont
       if (prop === "sync") {
         return async () => {
           const result = await value.call(target);
-          await resolvePendingSheetIds();
+          await resolvePendingSheetRefs();
           return result;
         };
       }

@@ -1,5 +1,7 @@
 /* global Excel */
 
+import { getStableSheetId, preloadSheetIds } from "./sheet-id-map";
+
 export interface CellData {
   value: string | number | boolean | null;
   formula?: string;
@@ -90,22 +92,26 @@ export async function getWorksheetById(
   await context.sync();
 
   for (const sheet of sheets.items) {
-    sheet.load("id,name");
+    sheet.load("id");
   }
   await context.sync();
 
+  const idMap = await preloadSheetIds(sheets.items);
+
   for (const sheet of sheets.items) {
-    const numericId = Number.parseInt(sheet.id.replace(/\D/g, ""), 10);
-    if (numericId === sheetId || sheet.id === String(sheetId)) {
+    const stableId = idMap.get(sheet.id);
+    if (stableId === sheetId) {
       return sheet;
     }
   }
 
-  if (sheetId >= 1 && sheetId <= sheets.items.length) {
-    return sheets.items[sheetId - 1];
-  }
-
   return null;
+}
+
+export async function getWorksheetStableId(context: Excel.RequestContext, sheet: Excel.Worksheet): Promise<number> {
+  sheet.load("id");
+  await context.sync();
+  return getStableSheetId(sheet.id);
 }
 
 export async function getCellRanges(
@@ -207,14 +213,12 @@ export async function getCellRanges(
       }
     }
 
-    const sheetNumericId = Number.parseInt(sheet.id.replace(/\D/g, ""), 10) || sheetId;
-
     return {
       success: true,
       hasMore,
       worksheet: {
         name: sheet.name,
-        sheetId: sheetNumericId,
+        sheetId,
         dimension,
         cells,
         ...(Object.keys(formulas).length > 0 && { formulas }),
@@ -330,6 +334,13 @@ export async function searchData(
     sheets.load("items");
     await context.sync();
 
+    for (const sheet of sheets.items) {
+      sheet.load("id");
+    }
+    await context.sync();
+
+    const stableIdMap = await preloadSheetIds(sheets.items);
+
     const matches: SearchMatch[] = [];
     const sheetsToSearch = sheetId
       ? ([await getWorksheetById(context, sheetId)].filter(Boolean) as Excel.Worksheet[])
@@ -346,6 +357,7 @@ export async function searchData(
       if (searchRange.isNullObject) continue;
 
       const { startCol, startRow } = parseRangeAddress(searchRange.address);
+      const stableSheetId = stableIdMap.get(sheet.id) || (await getStableSheetId(sheet.id));
 
       for (let r = 0; r < searchRange.rowCount; r++) {
         for (let c = 0; c < searchRange.columnCount; c++) {
@@ -365,10 +377,9 @@ export async function searchData(
           }
 
           if (isMatch && matches.length >= offset) {
-            const sheetNumericId = Number.parseInt(sheet.id.replace(/\D/g, ""), 10);
             matches.push({
               sheetName: sheet.name,
-              sheetId: sheetNumericId,
+              sheetId: stableSheetId,
               a1: cellAddress(startRow + r, startCol + c),
               value: value as string | number | boolean,
               formula: typeof formula === "string" && formula.startsWith("=") ? formula : null,
@@ -416,6 +427,13 @@ export async function getAllObjects(options: { sheetId?: number; id?: string } =
     sheets.load("items");
     await context.sync();
 
+    for (const sheet of sheets.items) {
+      sheet.load("id");
+    }
+    await context.sync();
+
+    const stableIdMap = await preloadSheetIds(sheets.items);
+
     const objects: ExcelObject[] = [];
     const sheetsToCheck = sheetId
       ? ([await getWorksheetById(context, sheetId)].filter(Boolean) as Excel.Worksheet[])
@@ -429,7 +447,7 @@ export async function getAllObjects(options: { sheetId?: number; id?: string } =
       pivotTables.load("items");
       await context.sync();
 
-      const sheetNumericId = Number.parseInt(sheet.id.replace(/\D/g, ""), 10);
+      const stableSheetId = stableIdMap.get(sheet.id) || (await getStableSheetId(sheet.id));
 
       for (const chart of charts.items) {
         chart.load("id,name");
@@ -439,7 +457,7 @@ export async function getAllObjects(options: { sheetId?: number; id?: string } =
             id: chart.id,
             type: "chart",
             name: chart.name,
-            sheetId: sheetNumericId,
+            sheetId: stableSheetId,
             sheetName: sheet.name,
           });
         }
@@ -453,7 +471,7 @@ export async function getAllObjects(options: { sheetId?: number; id?: string } =
             id: pivot.id,
             type: "pivotTable",
             name: pivot.name,
-            sheetId: sheetNumericId,
+            sheetId: stableSheetId,
             sheetName: sheet.name,
           });
         }
@@ -856,8 +874,8 @@ export async function modifyWorkbookStructure(params: {
         if (tabColor) newSheet.tabColor = tabColor;
         newSheet.load("id,name");
         await context.sync();
-        const numericId = Number.parseInt(newSheet.id.replace(/\D/g, ""), 10);
-        return { success: true, operation, sheetId: numericId, sheetName: newSheet.name };
+        const newSheetIndex = await getWorksheetStableId(context, newSheet);
+        return { success: true, operation, sheetId: newSheetIndex, sheetName: newSheet.name };
       }
       case "delete": {
         const sheet = await getWorksheetById(context, sheetId!);
@@ -880,8 +898,8 @@ export async function modifyWorkbookStructure(params: {
         if (newName) copy.name = newName;
         copy.load("id,name");
         await context.sync();
-        const numericId = Number.parseInt(copy.id.replace(/\D/g, ""), 10);
-        return { success: true, operation, sheetId: numericId, sheetName: copy.name };
+        const copyIndex = await getWorksheetStableId(context, copy);
+        return { success: true, operation, sheetId: copyIndex, sheetName: copy.name };
       }
     }
   });
@@ -1011,22 +1029,28 @@ export async function getWorkbookMetadata(): Promise<WorkbookMetadata> {
     }
     await context.sync();
 
-    const sheetsMetadata: SheetMetadata[] = sheetData.map(({ sheet, usedRange, freezeLocation }) => ({
-      id: Number.parseInt(sheet.id.replace(/\D/g, ""), 10),
-      name: sheet.name,
-      maxRows: usedRange.isNullObject ? 0 : usedRange.rowCount,
-      maxColumns: usedRange.isNullObject ? 0 : usedRange.columnCount,
-      frozenRows: freezeLocation.isNullObject ? 0 : freezeLocation.rowCount,
-      frozenColumns: freezeLocation.isNullObject ? 0 : freezeLocation.columnCount,
-    }));
+    const stableIdMap = await preloadSheetIds(sheets.items);
 
-    const activeSheetId = Number.parseInt(activeSheet.id.replace(/\D/g, ""), 10);
+    const sheetsMetadata: SheetMetadata[] = await Promise.all(
+      sheetData.map(async ({ sheet, usedRange, freezeLocation }) => ({
+        id: stableIdMap.get(sheet.id) || (await getStableSheetId(sheet.id)),
+        name: sheet.name,
+        maxRows: usedRange.isNullObject ? 0 : usedRange.rowCount,
+        maxColumns: usedRange.isNullObject ? 0 : usedRange.columnCount,
+        frozenRows: freezeLocation.isNullObject ? 0 : freezeLocation.rowCount,
+        frozenColumns: freezeLocation.isNullObject ? 0 : freezeLocation.columnCount,
+      })),
+    );
+
+    const activeSheetStableId = stableIdMap.get(activeSheet.id) || (await getStableSheetId(activeSheet.id));
+
     const rangeAddress = selectedRange.address.includes("!")
       ? selectedRange.address.split("!")[1]
       : selectedRange.address;
 
     console.log("[getWorkbookMetadata] activeSheet.id:", activeSheet.id);
     console.log("[getWorkbookMetadata] activeSheet.name:", activeSheet.name);
+    console.log("[getWorkbookMetadata] activeSheet.stableId:", activeSheetStableId);
     console.log("[getWorkbookMetadata] selectedRange.address:", selectedRange.address);
     console.log("[getWorkbookMetadata] parsed rangeAddress:", rangeAddress);
 
@@ -1035,7 +1059,7 @@ export async function getWorkbookMetadata(): Promise<WorkbookMetadata> {
       fileName: workbook.name || "Untitled",
       sheetsMetadata,
       totalSheets: sheets.items.length,
-      activeSheetId,
+      activeSheetId: activeSheetStableId,
       activeSheetName: activeSheet.name,
       selectedRange: rangeAddress,
     };

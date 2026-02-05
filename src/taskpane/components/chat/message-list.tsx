@@ -47,15 +47,17 @@ function parseDirtyRanges(result: string | undefined): DirtyRange[] | null {
 }
 
 function DirtyRangeLink({ range }: { range: DirtyRange }) {
+  const { getSheetName } = useChat();
   const isNavigable = range.sheetId > 0; // sheetId -1 means unknown
+  const sheetDisplay = getSheetName(range.sheetId) || `Sheet ${range.sheetId}`;
   const label =
     range.sheetId < 0
       ? range.range === "*"
         ? "Unknown sheet"
         : `Unknown!${range.range}`
       : range.range === "*"
-        ? `Sheet ${range.sheetId} (all)`
-        : `Sheet ${range.sheetId}!${range.range}`;
+        ? `${sheetDisplay} (all)`
+        : `${sheetDisplay}!${range.range}`;
 
   if (!isNavigable) {
     return <span className="text-(--chat-warning-muted)">{label}</span>;
@@ -93,19 +95,21 @@ function DirtyRangeLinks({ ranges }: { ranges: DirtyRange[] }) {
   );
 }
 
-function formatRangeBrief(range: DirtyRange): string {
-  if (range.sheetId < 0) return range.range === "*" ? "unknown" : range.range;
-  if (range.range === "*") return `Sheet ${range.sheetId}`;
-  return `${range.range}`;
-}
-
 function DirtyRangeSummary({ ranges }: { ranges: DirtyRange[] }) {
+  const { getSheetName } = useChat();
   const merged = useMemo(() => mergeRanges(ranges), [ranges]);
 
   if (merged.length === 0) return null;
 
+  const formatBrief = (range: DirtyRange): string => {
+    if (range.sheetId < 0) return range.range === "*" ? "unknown" : range.range;
+    const sheetDisplay = getSheetName(range.sheetId) || `Sheet ${range.sheetId}`;
+    if (range.range === "*") return sheetDisplay;
+    return `${range.range}`;
+  };
+
   if (merged.length === 1) {
-    return <span className="text-[10px] text-(--chat-warning) truncate">→ {formatRangeBrief(merged[0])}</span>;
+    return <span className="text-[10px] text-(--chat-warning) truncate">→ {formatBrief(merged[0])}</span>;
   }
 
   // Multiple ranges - show count

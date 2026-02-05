@@ -102,6 +102,7 @@ interface ChatState {
   sessionStats: SessionStats;
   currentSession: ChatSession | null;
   sessions: ChatSession[];
+  sheetNames: Record<number, string>;
 }
 
 const INITIAL_STATS: SessionStats = {
@@ -125,6 +126,7 @@ interface ChatContextValue {
   newSession: () => Promise<void>;
   switchSession: (sessionId: string) => Promise<void>;
   deleteCurrentSession: () => Promise<void>;
+  getSheetName: (sheetId: number) => string | undefined;
 }
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -204,6 +206,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       sessionStats: INITIAL_STATS,
       currentSession: null,
       sessions: [],
+      sheetNames: {},
     };
   });
 
@@ -499,6 +502,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           const metadata = await getWorkbookMetadata();
           console.log("[Chat] Workbook metadata:", metadata);
           promptContent = `<wb_context>\n${JSON.stringify(metadata, null, 2)}\n</wb_context>\n\n${content}`;
+
+          if (metadata.sheetsMetadata) {
+            const newSheetNames: Record<number, string> = {};
+            for (const sheet of metadata.sheetsMetadata) {
+              newSheetNames[sheet.id] = sheet.name;
+            }
+            setState((prev) => ({ ...prev, sheetNames: newSheetNames }));
+          }
         } catch (err) {
           console.error("[Chat] Failed to get workbook metadata:", err);
         }
@@ -666,6 +677,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [setProviderConfig]);
 
+  const getSheetName = useCallback(
+    (sheetId: number): string | undefined => state.sheetNames[sheetId],
+    [state.sheetNames],
+  );
+
   return (
     <ChatContext.Provider
       value={{
@@ -679,6 +695,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         newSession,
         switchSession,
         deleteCurrentSession,
+        getSheetName,
       }}
     >
       {children}
