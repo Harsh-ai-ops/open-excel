@@ -80,7 +80,6 @@ let locked = false;
 
 export function ensureLockdown() {
   if (locked) return;
-  locked = true;
   try {
     const savedFnProps = saveFunctionProperties();
     lockdown({
@@ -89,9 +88,12 @@ export function ensureLockdown() {
       overrideTaming: "severe",
       stackFiltering: "verbose",
     });
+    locked = true;
     restoreFunctionProperties(savedFnProps);
   } catch (e) {
-    if (!(e instanceof TypeError && String(e).includes("SES_ALREADY_LOCKED_DOWN"))) {
+    if (e instanceof TypeError && String(e).includes("SES_ALREADY_LOCKED_DOWN")) {
+      locked = true;
+    } else {
       throw e;
     }
   }

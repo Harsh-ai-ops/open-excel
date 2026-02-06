@@ -1,10 +1,10 @@
 import { Type } from "@sinclair/typebox";
-import { ensureLockdown } from "../../taskpane/lockdown";
 import type { DirtyRange } from "../dirty-tracker";
 import { createTrackedContext } from "../excel/tracked-context";
+import { sandboxedEval } from "../sandbox";
 import { defineTool, toolError, toolSuccess } from "./types";
 
-/* global Excel, Compartment */
+/* global Excel */
 
 const MUTATION_PATTERNS = [
   /\.(values|formulas|numberFormat)\s*=/,
@@ -17,44 +17,6 @@ const MUTATION_PATTERNS = [
 
 function looksLikeMutation(code: string): boolean {
   return MUTATION_PATTERNS.some((p) => p.test(code));
-}
-
-const BLOCKED_OBJECT_METHODS = new Set([
-  "defineProperty",
-  "getOwnPropertyDescriptor",
-  "getPrototypeOf",
-  "setPrototypeOf",
-]);
-
-function createRestrictedObject(): Record<string, unknown> {
-  const restricted: Record<string, unknown> = {};
-  for (const key of Object.getOwnPropertyNames(Object)) {
-    if (!BLOCKED_OBJECT_METHODS.has(key)) {
-      restricted[key] = (Object as unknown as Record<string, unknown>)[key];
-    }
-  }
-  return restricted;
-}
-
-function sandboxedEval(code: string, globals: Record<string, unknown>): unknown {
-  ensureLockdown();
-  const compartment = new Compartment({
-    globals: {
-      ...globals,
-      console,
-      Math,
-      Date,
-      Object: createRestrictedObject(),
-      Function: undefined,
-      Reflect: undefined,
-      Proxy: undefined,
-      Compartment: undefined,
-      harden: undefined,
-      lockdown: undefined,
-    },
-    __options__: true, // required to use options-bag constructor form
-  });
-  return compartment.evaluate(`(async () => { ${code} })()`);
 }
 
 export const evalOfficeJsTool = defineTool({
