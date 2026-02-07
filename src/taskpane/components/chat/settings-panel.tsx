@@ -1,53 +1,23 @@
-import { Check, Eye, EyeOff, FolderUp, Plus, Trash2 } from "lucide-react";
+import { Check, ExternalLink, Eye, EyeOff, FolderUp, LogOut, Plus, Trash2 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
-import { type ThinkingLevel, useChat } from "./chat-context";
-
-const STORAGE_KEY = "openexcel-provider-config";
-
-interface SavedConfig {
-  provider: string;
-  apiKey: string;
-  model: string;
-  useProxy: boolean;
-  proxyUrl: string;
-  thinking: ThinkingLevel;
-  followMode?: boolean;
-}
-
-function loadSavedConfig(): SavedConfig | null {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const config = JSON.parse(saved);
-      if (config.proxyUrl === undefined) config.proxyUrl = "";
-      if (config.followMode === undefined) config.followMode = true;
-      return config;
-    }
-  } catch {}
-  return null;
-}
-
-function saveConfig(
-  provider: string,
-  apiKey: string,
-  model: string,
-  useProxy: boolean,
-  proxyUrl: string,
-  thinking: ThinkingLevel,
-  followMode: boolean,
-) {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({ provider, apiKey, model, useProxy, proxyUrl, thinking, followMode }),
-  );
-}
-
-const THINKING_LEVELS: { value: ThinkingLevel; label: string }[] = [
-  { value: "none", label: "None" },
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-];
+import {
+  buildAuthorizationUrl,
+  exchangeOAuthCode,
+  generatePKCE,
+  loadOAuthCredentials,
+  OAUTH_PROVIDERS,
+  type OAuthFlowState,
+  removeOAuthCredentials,
+  saveOAuthCredentials,
+} from "../../../lib/oauth";
+import {
+  API_TYPES,
+  loadSavedConfig,
+  saveConfig,
+  THINKING_LEVELS,
+  type ThinkingLevel,
+} from "../../../lib/provider-config";
+import { useChat } from "./chat-context";
 
 function SkillsSection() {
   const { state, installSkill, uninstallSkill } = useChat();
@@ -90,7 +60,6 @@ function SkillsSection() {
       <div className="text-[10px] uppercase tracking-widest text-(--chat-text-muted) mb-4">agent skills</div>
 
       <div className="space-y-3">
-        {/* Installed skills list */}
         {state.skills.length > 0 ? (
           <div className="space-y-1">
             {state.skills.map((skill) => (
@@ -118,7 +87,6 @@ function SkillsSection() {
           <p className="text-xs text-(--chat-text-muted)">No skills installed</p>
         )}
 
-        {/* Add skill buttons */}
         <div className="flex gap-2">
           <button
             type="button"
@@ -152,7 +120,6 @@ function SkillsSection() {
         </p>
       </div>
 
-      {/* Hidden file inputs */}
       <input
         ref={folderInputRef}
         type="file"
@@ -176,9 +143,22 @@ export function SettingsPanel() {
   const [useProxy, setUseProxy] = useState(() => saved?.useProxy !== false);
   const [proxyUrl, setProxyUrl] = useState(() => saved?.proxyUrl || "");
   const [thinking, setThinking] = useState<ThinkingLevel>(() => saved?.thinking || "none");
+  const [apiType, setApiType] = useState(() => saved?.apiType || "openai-completions");
+  const [customBaseUrl, setCustomBaseUrl] = useState(() => saved?.customBaseUrl || "");
+  const [authMethod, setAuthMethod] = useState<"apikey" | "oauth">(() => saved?.authMethod || "apikey");
 
-  // Preserve followMode from current state (managed via header toggle)
+  // OAuth flow state
+  const [oauthFlow, setOauthFlow] = useState<OAuthFlowState>(() => {
+    if (saved?.authMethod === "oauth") {
+      const creds = loadOAuthCredentials(saved.provider);
+      return creds ? { step: "connected" } : { step: "idle" };
+    }
+    return { step: "idle" };
+  });
+  const [oauthCodeInput, setOauthCodeInput] = useState("");
+
   const followMode = state.providerConfig?.followMode ?? true;
+  const isCustom = provider === "custom";
 
   const updateAndSync = useCallback(
     (
@@ -189,6 +169,9 @@ export function SettingsPanel() {
         useProxy: boolean;
         proxyUrl: string;
         thinking: ThinkingLevel;
+        apiType: string;
+        customBaseUrl: string;
+        authMethod: "apikey" | "oauth";
       }>,
     ) => {
       const p = updates.provider ?? provider;
@@ -197,6 +180,9 @@ export function SettingsPanel() {
       const up = updates.useProxy ?? useProxy;
       const pu = updates.proxyUrl ?? proxyUrl;
       const t = updates.thinking ?? thinking;
+      const at = updates.apiType ?? apiType;
+      const cb = updates.customBaseUrl ?? customBaseUrl;
+      const am = updates.authMethod ?? authMethod;
 
       if ("provider" in updates) setProvider(p);
       if ("apiKey" in updates) setApiKey(k);
@@ -204,23 +190,131 @@ export function SettingsPanel() {
       if ("useProxy" in updates) setUseProxy(up);
       if ("proxyUrl" in updates) setProxyUrl(pu);
       if ("thinking" in updates) setThinking(t);
+      if ("apiType" in updates) setApiType(at);
+      if ("customBaseUrl" in updates) setCustomBaseUrl(cb);
+      if ("authMethod" in updates) setAuthMethod(am);
 
-      if (p && k && m) {
-        saveConfig(p, k, m, up, pu, t, followMode);
-        setProviderConfig({ provider: p, apiKey: k, model: m, useProxy: up, proxyUrl: pu, thinking: t, followMode });
+      const isCustomEndpoint = p === "custom";
+      const isValid = isCustomEndpoint ? p && at && cb && m && k : p && k && m;
+
+      if (isValid) {
+        saveConfig({
+          provider: p,
+          apiKey: k,
+          model: m,
+          useProxy: up,
+          proxyUrl: pu,
+          thinking: t,
+          followMode,
+          apiType: at,
+          customBaseUrl: cb,
+          authMethod: am,
+        });
+        setProviderConfig({
+          provider: p,
+          apiKey: k,
+          model: m,
+          useProxy: up,
+          proxyUrl: pu,
+          thinking: t,
+          followMode,
+          apiType: at,
+          customBaseUrl: cb,
+          authMethod: am,
+        });
       }
     },
-    [provider, apiKey, model, useProxy, proxyUrl, thinking, followMode, setProviderConfig],
+    [
+      provider,
+      apiKey,
+      model,
+      useProxy,
+      proxyUrl,
+      thinking,
+      apiType,
+      customBaseUrl,
+      authMethod,
+      followMode,
+      setProviderConfig,
+    ],
   );
 
-  const models = provider ? getModelsForProvider(provider) : [];
+  const models = provider && !isCustom ? getModelsForProvider(provider) : [];
+
+  const hasOAuth = provider in OAUTH_PROVIDERS;
 
   const handleProviderChange = (newProvider: string) => {
-    const providerModels = newProvider ? getModelsForProvider(newProvider) : [];
-    updateAndSync({ provider: newProvider, model: providerModels[0]?.id || "" });
+    if (newProvider === "custom") {
+      updateAndSync({ provider: newProvider, model: "", authMethod: "apikey" });
+    } else {
+      const providerModels = newProvider ? getModelsForProvider(newProvider) : [];
+      const keepOAuth = newProvider in OAUTH_PROVIDERS ? authMethod : "apikey";
+      updateAndSync({ provider: newProvider, model: providerModels[0]?.id || "", authMethod: keepOAuth });
+    }
+    // Reset OAuth flow when switching away from an OAuth-capable provider
+    if (!(newProvider in OAUTH_PROVIDERS)) {
+      setOauthFlow({ step: "idle" });
+    }
+  };
+
+  const handleAuthMethodChange = (newMethod: "apikey" | "oauth") => {
+    if (newMethod === "oauth") {
+      const creds = loadOAuthCredentials(provider);
+      if (creds) {
+        setOauthFlow({ step: "connected" });
+        updateAndSync({ authMethod: "oauth", apiKey: creds.access });
+      } else {
+        setAuthMethod("oauth");
+        setOauthFlow({ step: "idle" });
+      }
+    } else {
+      setOauthFlow({ step: "idle" });
+      updateAndSync({ authMethod: "apikey", apiKey: "" });
+    }
+  };
+
+  const startOAuthLogin = async () => {
+    try {
+      const { verifier, challenge } = await generatePKCE();
+      const { url, oauthState } = buildAuthorizationUrl(provider, challenge, verifier);
+      window.open(url, "_blank");
+      setOauthFlow({ step: "awaiting-code", verifier, oauthState });
+    } catch (err) {
+      setOauthFlow({ step: "error", message: err instanceof Error ? err.message : "Failed to start OAuth" });
+    }
+  };
+
+  const submitOAuthCode = async () => {
+    if (oauthFlow.step !== "awaiting-code" || !oauthCodeInput.trim()) return;
+    const { verifier } = oauthFlow;
+    setOauthFlow({ step: "exchanging" });
+
+    try {
+      const creds = await exchangeOAuthCode({
+        provider,
+        rawInput: oauthCodeInput.trim(),
+        verifier,
+        expectedState: oauthFlow.oauthState,
+        useProxy,
+        proxyUrl,
+      });
+      saveOAuthCredentials(provider, creds);
+      setOauthFlow({ step: "connected" });
+      setOauthCodeInput("");
+      updateAndSync({ apiKey: creds.access, authMethod: "oauth" });
+    } catch (err) {
+      setOauthFlow({ step: "error", message: err instanceof Error ? err.message : "OAuth failed" });
+    }
+  };
+
+  const logoutOAuth = () => {
+    removeOAuthCredentials(provider);
+    setOauthFlow({ step: "idle" });
+    updateAndSync({ authMethod: "apikey", apiKey: "" });
   };
 
   const isConfigured = state.providerConfig !== null;
+  const showApiKeyInput = !(hasOAuth && authMethod === "oauth");
 
   const inputStyle = {
     borderRadius: "var(--chat-radius)",
@@ -233,12 +327,13 @@ export function SettingsPanel() {
         <div className="text-[10px] uppercase tracking-widest text-(--chat-text-muted) mb-4">api configuration</div>
 
         <div className="space-y-4">
+          {/* Provider */}
           <label className="block">
             <span className="block text-xs text-(--chat-text-secondary) mb-1.5">Provider</span>
             <select
               value={provider}
               onChange={(e) => handleProviderChange(e.target.value)}
-              className="w-full bg-(--chat-input-bg) text-(--chat-text-primary) 
+              className="w-full bg-(--chat-input-bg) text-(--chat-text-primary)
                          text-sm px-3 py-2 border border-(--chat-border)
                          focus:outline-none focus:border-(--chat-border-active)"
               style={inputStyle}
@@ -249,55 +344,259 @@ export function SettingsPanel() {
                   {p}
                 </option>
               ))}
+              <option disabled>──────────</option>
+              <option value="custom">Custom Endpoint</option>
             </select>
           </label>
 
-          <label className="block">
-            <span className="block text-xs text-(--chat-text-secondary) mb-1.5">Model</span>
-            <select
-              value={model}
-              onChange={(e) => updateAndSync({ model: e.target.value })}
-              disabled={!provider}
-              className="w-full bg-(--chat-input-bg) text-(--chat-text-primary)
-                         text-sm px-3 py-2 border border-(--chat-border)
-                         focus:outline-none focus:border-(--chat-border-active)
-                         disabled:opacity-50 disabled:cursor-not-allowed"
-              style={inputStyle}
-            >
-              <option value="">Select model...</option>
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          {/* Custom Endpoint fields */}
+          {isCustom && (
+            <>
+              <label className="block">
+                <span className="block text-xs text-(--chat-text-secondary) mb-1.5">API Type</span>
+                <select
+                  value={apiType}
+                  onChange={(e) => updateAndSync({ apiType: e.target.value })}
+                  className="w-full bg-(--chat-input-bg) text-(--chat-text-primary)
+                             text-sm px-3 py-2 border border-(--chat-border)
+                             focus:outline-none focus:border-(--chat-border-active)"
+                  style={inputStyle}
+                >
+                  {API_TYPES.map((at) => (
+                    <option key={at.id} value={at.id}>
+                      {at.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-(--chat-text-muted) mt-1">
+                  {API_TYPES.find((at) => at.id === apiType)?.hint}
+                </p>
+              </label>
 
-          <label className="block">
-            <span className="block text-xs text-(--chat-text-secondary) mb-1.5">API Key</span>
-            <div className="relative">
-              <input
-                type={showKey ? "text" : "password"}
-                value={apiKey}
-                onChange={(e) => updateAndSync({ apiKey: e.target.value })}
-                placeholder="Enter your API key"
+              <label className="block">
+                <span className="block text-xs text-(--chat-text-secondary) mb-1.5">Base URL</span>
+                <input
+                  type="text"
+                  value={customBaseUrl}
+                  onChange={(e) => updateAndSync({ customBaseUrl: e.target.value })}
+                  placeholder="https://api.openai.com/v1"
+                  className="w-full bg-(--chat-input-bg) text-(--chat-text-primary)
+                             text-sm px-3 py-2 border border-(--chat-border)
+                             placeholder:text-(--chat-text-muted)
+                             focus:outline-none focus:border-(--chat-border-active)"
+                  style={inputStyle}
+                />
+                <p className="text-[10px] text-(--chat-text-muted) mt-1">The API endpoint URL for your provider</p>
+              </label>
+
+              <label className="block">
+                <span className="block text-xs text-(--chat-text-secondary) mb-1.5">Model ID</span>
+                <input
+                  type="text"
+                  value={model}
+                  onChange={(e) => updateAndSync({ model: e.target.value })}
+                  placeholder="gpt-4o"
+                  className="w-full bg-(--chat-input-bg) text-(--chat-text-primary)
+                             text-sm px-3 py-2 border border-(--chat-border)
+                             placeholder:text-(--chat-text-muted)
+                             focus:outline-none focus:border-(--chat-border-active)"
+                  style={inputStyle}
+                />
+              </label>
+            </>
+          )}
+
+          {/* Model dropdown — built-in providers only */}
+          {!isCustom && provider && (
+            <label className="block">
+              <span className="block text-xs text-(--chat-text-secondary) mb-1.5">Model</span>
+              <select
+                value={model}
+                onChange={(e) => updateAndSync({ model: e.target.value })}
+                disabled={!provider}
                 className="w-full bg-(--chat-input-bg) text-(--chat-text-primary)
-                           text-sm px-3 py-2 pr-10 border border-(--chat-border)
-                           placeholder:text-(--chat-text-muted)
-                           focus:outline-none focus:border-(--chat-border-active)"
+                           text-sm px-3 py-2 border border-(--chat-border)
+                           focus:outline-none focus:border-(--chat-border-active)
+                           disabled:opacity-50 disabled:cursor-not-allowed"
                 style={inputStyle}
-              />
-              <button
-                type="button"
-                onClick={() => setShowKey(!showKey)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-(--chat-text-muted)
-                           hover:text-(--chat-text-secondary)"
               >
-                {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
-              </button>
-            </div>
-          </label>
+                <option value="">Select model...</option>
+                {models.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
+          {/* Auth method toggle — providers with OAuth support */}
+          {hasOAuth && (
+            <div>
+              <span className="block text-xs text-(--chat-text-secondary) mb-1.5">Authentication</span>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => handleAuthMethodChange("apikey")}
+                  className={`flex-1 py-1.5 text-xs border transition-colors ${
+                    authMethod === "apikey"
+                      ? "bg-(--chat-accent) border-(--chat-accent) text-white"
+                      : "bg-(--chat-input-bg) border-(--chat-border) text-(--chat-text-secondary) hover:border-(--chat-border-active)"
+                  }`}
+                  style={{ borderRadius: "var(--chat-radius)" }}
+                >
+                  API Key
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAuthMethodChange("oauth")}
+                  className={`flex-1 py-1.5 text-xs border transition-colors ${
+                    authMethod === "oauth"
+                      ? "bg-(--chat-accent) border-(--chat-accent) text-white"
+                      : "bg-(--chat-input-bg) border-(--chat-border) text-(--chat-text-secondary) hover:border-(--chat-border-active)"
+                  }`}
+                  style={{ borderRadius: "var(--chat-radius)" }}
+                >
+                  {OAUTH_PROVIDERS[provider]?.label ?? "OAuth"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* OAuth flow — providers with OAuth support */}
+          {hasOAuth && authMethod === "oauth" && (
+            <div className="space-y-2">
+              {oauthFlow.step === "idle" && (
+                <button
+                  type="button"
+                  onClick={startOAuthLogin}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-xs
+                             bg-(--chat-input-bg) border border-(--chat-border) text-(--chat-text-primary)
+                             hover:border-(--chat-accent) hover:text-(--chat-accent) transition-colors"
+                  style={{ borderRadius: "var(--chat-radius)" }}
+                >
+                  <ExternalLink size={12} />
+                  {OAUTH_PROVIDERS[provider]?.buttonText ?? "Login"}
+                </button>
+              )}
+
+              {oauthFlow.step === "awaiting-code" && (
+                <div className="space-y-2">
+                  <p className="text-[10px] text-(--chat-text-muted)">
+                    {provider === "openai-codex"
+                      ? "Complete login in the opened tab. The page will redirect to localhost and fail — copy the full URL from your browser's address bar and paste it below:"
+                      : "Authorize in the opened tab, then paste the code shown on the redirect page:"}
+                  </p>
+                  <div className="flex gap-1">
+                    <input
+                      type="text"
+                      value={oauthCodeInput}
+                      onChange={(e) => setOauthCodeInput(e.target.value)}
+                      placeholder={
+                        provider === "openai-codex" ? "Paste the full redirect URL here" : "Paste code#state here"
+                      }
+                      className="flex-1 bg-(--chat-input-bg) text-(--chat-text-primary)
+                                 text-sm px-3 py-2 border border-(--chat-border)
+                                 placeholder:text-(--chat-text-muted)
+                                 focus:outline-none focus:border-(--chat-border-active)"
+                      style={inputStyle}
+                      onKeyDown={(e) => e.key === "Enter" && submitOAuthCode()}
+                    />
+                    <button
+                      type="button"
+                      onClick={submitOAuthCode}
+                      disabled={!oauthCodeInput.trim()}
+                      className="px-3 py-2 text-xs bg-(--chat-accent) text-white border border-(--chat-accent)
+                                 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      style={{ borderRadius: "var(--chat-radius)" }}
+                    >
+                      Submit
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-(--chat-text-muted)">
+                    Requires CORS proxy to be enabled for token exchange.
+                  </p>
+                </div>
+              )}
+
+              {oauthFlow.step === "exchanging" && (
+                <div
+                  className="px-3 py-2.5 text-xs text-(--chat-text-muted) bg-(--chat-input-bg) border border-(--chat-border)"
+                  style={{ borderRadius: "var(--chat-radius)" }}
+                >
+                  Exchanging authorization code…
+                </div>
+              )}
+
+              {oauthFlow.step === "connected" && (
+                <div
+                  className="flex items-center justify-between px-3 py-2.5 bg-(--chat-input-bg) border border-(--chat-border)"
+                  style={{ borderRadius: "var(--chat-radius)" }}
+                >
+                  <div className="flex items-center gap-2 text-xs">
+                    <Check size={12} className="text-(--chat-success)" />
+                    <span className="text-(--chat-text-secondary)">Connected via OAuth</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={logoutOAuth}
+                    className="flex items-center gap-1 text-[10px] text-(--chat-text-muted) hover:text-(--chat-error) transition-colors"
+                  >
+                    <LogOut size={10} />
+                    Logout
+                  </button>
+                </div>
+              )}
+
+              {oauthFlow.step === "error" && (
+                <div className="space-y-2">
+                  <div
+                    className="px-3 py-2 text-xs text-(--chat-error) bg-(--chat-input-bg) border border-(--chat-error)/30"
+                    style={{ borderRadius: "var(--chat-radius)" }}
+                  >
+                    {oauthFlow.message}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setOauthFlow({ step: "idle" })}
+                    className="text-[10px] text-(--chat-text-muted) hover:text-(--chat-text-secondary) transition-colors"
+                  >
+                    Try again
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* API Key input — hidden when using OAuth */}
+          {showApiKeyInput && (
+            <label className="block">
+              <span className="block text-xs text-(--chat-text-secondary) mb-1.5">API Key</span>
+              <div className="relative">
+                <input
+                  type={showKey ? "text" : "password"}
+                  value={apiKey}
+                  onChange={(e) => updateAndSync({ apiKey: e.target.value })}
+                  placeholder="Enter your API key"
+                  className="w-full bg-(--chat-input-bg) text-(--chat-text-primary)
+                             text-sm px-3 py-2 pr-10 border border-(--chat-border)
+                             placeholder:text-(--chat-text-muted)
+                             focus:outline-none focus:border-(--chat-border-active)"
+                  style={inputStyle}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey(!showKey)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-(--chat-text-muted)
+                             hover:text-(--chat-text-secondary)"
+                >
+                  {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </label>
+          )}
+
+          {/* CORS Proxy */}
           <div className="flex items-center justify-between">
             <div>
               <span className="text-xs text-(--chat-text-secondary)">CORS Proxy</span>
@@ -340,6 +639,7 @@ export function SettingsPanel() {
             </label>
           )}
 
+          {/* Thinking Level */}
           <div>
             <span className="block text-xs text-(--chat-text-secondary) mb-1.5">Thinking Level</span>
             <div className="flex gap-1">
@@ -367,12 +667,19 @@ export function SettingsPanel() {
         </div>
       </div>
 
+      {/* Status */}
       <div className="border-t border-(--chat-border) pt-4">
         <div className="flex items-center gap-2 text-xs">
           {isConfigured ? (
             <>
               <Check size={12} className="text-(--chat-success)" />
-              <span className="text-(--chat-text-secondary)">Using {state.providerConfig?.provider}</span>
+              <span className="text-(--chat-text-secondary)">
+                Using{" "}
+                {state.providerConfig?.provider === "custom"
+                  ? `custom (${state.providerConfig?.apiType})`
+                  : state.providerConfig?.provider}
+                {state.providerConfig?.authMethod === "oauth" && " via OAuth"}
+              </span>
             </>
           ) : (
             <span className="text-(--chat-text-muted)">Fill in all fields above to get started</span>
@@ -380,19 +687,26 @@ export function SettingsPanel() {
         </div>
       </div>
 
+      {/* Skills */}
       <div className="border-t border-(--chat-border) pt-4">
         <SkillsSection />
       </div>
 
+      {/* About */}
       <div className="border-t border-(--chat-border) pt-4">
         <div className="text-[10px] uppercase tracking-widest text-(--chat-text-muted) mb-2">about</div>
         <p className="text-xs text-(--chat-text-secondary) leading-relaxed">
           OpenExcel uses your own API key to connect to LLM providers. Your key is stored locally in the browser.
         </p>
+        {isCustom && (
+          <p className="text-xs text-(--chat-text-muted) leading-relaxed mt-2">
+            Custom Endpoint: Point to any OpenAI-compatible API (Ollama, vLLM, LMStudio) or other supported API types.
+          </p>
+        )}
         {useProxy && (
           <p className="text-xs text-(--chat-text-muted) leading-relaxed mt-2">
             CORS Proxy: Requests route through your proxy to bypass browser CORS restrictions. Required for Claude OAuth
-            and Z.ai.
+            and some providers.
           </p>
         )}
         <p className="text-[10px] text-(--chat-text-muted) mt-3">v{__APP_VERSION__}</p>

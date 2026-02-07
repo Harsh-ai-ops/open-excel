@@ -17,6 +17,15 @@ import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { DirtyRange } from "../../../lib/dirty-tracker";
 import { getWorkbookMetadata, navigateTo } from "../../../lib/excel/api";
+import { loadOAuthCredentials, refreshOAuthToken, saveOAuthCredentials } from "../../../lib/oauth";
+import {
+  applyProxyToModel,
+  buildCustomModel,
+  loadSavedConfig,
+  type ProviderConfig,
+  saveConfig,
+  type ThinkingLevel,
+} from "../../../lib/provider-config";
 import {
   addSkill,
   buildSkillsPromptSection,
@@ -40,6 +49,8 @@ import {
 import { EXCEL_TOOLS } from "../../../lib/tools";
 import { deleteFile, listUploads, resetVfs, restoreVfs, snapshotVfs, writeFile } from "../../../lib/vfs";
 
+export type { ProviderConfig, ThinkingLevel };
+
 export type ToolCallStatus = "pending" | "running" | "complete" | "error";
 
 export type MessagePart =
@@ -61,18 +72,6 @@ export interface ChatMessage {
   timestamp: number;
 }
 
-export type ThinkingLevel = "none" | "low" | "medium" | "high";
-
-export interface ProviderConfig {
-  provider: string;
-  apiKey: string;
-  model: string;
-  useProxy: boolean;
-  proxyUrl: string;
-  thinking: ThinkingLevel;
-  followMode: boolean;
-}
-
 export interface SessionStats {
   inputTokens: number;
   outputTokens: number;
@@ -81,25 +80,6 @@ export interface SessionStats {
   totalCost: number;
   contextWindow: number;
   lastUsage: Usage | null;
-}
-
-const STORAGE_KEY = "openexcel-provider-config";
-
-function loadSavedConfig(): ProviderConfig | null {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const config = JSON.parse(saved);
-      if (config.proxyUrl === undefined) {
-        config.proxyUrl = "";
-      }
-      if (config.followMode === undefined) {
-        config.followMode = true; // Default to on
-      }
-      return config;
-    }
-  } catch {}
-  return null;
 }
 
 function parseDirtyRanges(result: string | undefined): DirtyRange[] | null {
@@ -118,14 +98,6 @@ function parseDirtyRanges(result: string | undefined): DirtyRange[] | null {
 export interface UploadedFile {
   name: string;
   size: number;
-}
-
-function applyProxyToModel(model: Model<any>, config: ProviderConfig): Model<any> {
-  if (!config.useProxy || !config.proxyUrl || !model.baseUrl) return model;
-  return {
-    ...model,
-    baseUrl: `${config.proxyUrl}/?url=${encodeURIComponent(model.baseUrl)}`,
-  };
 }
 
 interface ChatState {
@@ -493,15 +465,31 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const activeApiKeyRef = useRef<string>("");
+
   const applyConfig = useCallback(
     (config: ProviderConfig) => {
       let contextWindow = 0;
       let baseModel: Model<any>;
-      try {
-        baseModel = getModel(config.provider as any, config.model as any);
-        contextWindow = baseModel.contextWindow;
-      } catch {
-        return;
+      if (config.provider === "custom") {
+        const custom = buildCustomModel(config);
+        if (!custom) return;
+        baseModel = custom;
+      } else {
+        try {
+          baseModel = getModel(config.provider as any, config.model as any);
+        } catch {
+          return;
+        }
+      }
+      contextWindow = baseModel.contextWindow;
+
+      // Set active API key (for OAuth, prefer stored access token)
+      if (config.authMethod === "oauth") {
+        const creds = loadOAuthCredentials(config.provider);
+        activeApiKeyRef.current = creds?.access || config.apiKey;
+      } else {
+        activeApiKeyRef.current = config.apiKey;
       }
 
       const proxiedModel = applyProxyToModel(baseModel, config);
@@ -530,7 +518,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         streamFn: (model, context, options) => {
           return streamSimple(model, context, {
             ...options,
-            apiKey: config.apiKey,
+            apiKey: activeApiKeyRef.current || config.apiKey,
           });
         },
       });
@@ -624,6 +612,36 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         if (attachments && attachments.length > 0) {
           const paths = attachments.map((name) => `/home/user/uploads/${name}`).join("\n");
           promptContent = `<attachments>\n${paths}\n</attachments>\n\n${promptContent}`;
+        }
+
+        // Refresh OAuth token if needed
+        if (state.providerConfig?.authMethod === "oauth") {
+          try {
+            const creds = loadOAuthCredentials(state.providerConfig.provider);
+            if (creds && Date.now() >= creds.expires) {
+              console.log("[Chat] Refreshing OAuth token...");
+              const refreshed = await refreshOAuthToken(
+                state.providerConfig.provider,
+                creds.refresh,
+                state.providerConfig.proxyUrl,
+                state.providerConfig.useProxy,
+              );
+              saveOAuthCredentials(state.providerConfig.provider, refreshed);
+              activeApiKeyRef.current = refreshed.access;
+              console.log("[Chat] OAuth token refreshed");
+            } else if (creds) {
+              activeApiKeyRef.current = creds.access;
+            }
+          } catch (err) {
+            console.error("[Chat] OAuth token refresh failed:", err);
+            isStreamingRef.current = false;
+            setState((prev) => ({
+              ...prev,
+              isStreaming: false,
+              error: "OAuth token expired. Please re-login in Settings.",
+            }));
+            return;
+          }
         }
 
         await agent.prompt(promptContent);
@@ -949,7 +967,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       const newFollowMode = !prev.providerConfig.followMode;
       followModeRef.current = newFollowMode;
       const newConfig = { ...prev.providerConfig, followMode: newFollowMode };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
+      saveConfig(newConfig);
       return { ...prev, providerConfig: newConfig };
     });
   }, []);
