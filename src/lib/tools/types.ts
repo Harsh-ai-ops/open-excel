@@ -1,11 +1,8 @@
-import type { AgentTool } from "@mariozechner/pi-agent-core";
+import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import type { Static, TObject } from "@sinclair/typebox";
 import type { DirtyRange } from "../dirty-tracker";
 
-export interface ToolResult {
-  content: { type: "text"; text: string }[];
-  details: undefined;
-}
+export type ToolResult = AgentToolResult<undefined>;
 
 export interface DirtyTrackingConfig<T> {
   /** Derive dirty ranges from params and optionally the result (for success only) */
@@ -30,8 +27,9 @@ export function defineTool<T extends TObject>(config: ToolConfig<T>): AgentTool 
 
   const wrappedExecute = async (toolCallId: string, params: Static<T>, signal?: AbortSignal): Promise<ToolResult> => {
     const result = await execute(toolCallId, params, signal);
-    const text = result.content[0]?.text;
-    if (!text) return result;
+    const first = result.content[0];
+    if (!first || first.type !== "text") return result;
+    const text = first.text;
 
     try {
       const parsed = JSON.parse(text);
@@ -65,6 +63,13 @@ export function toolSuccess(data: unknown): ToolResult {
 export function toolError(message: string): ToolResult {
   return {
     content: [{ type: "text", text: JSON.stringify({ success: false, error: message }) }],
+    details: undefined,
+  };
+}
+
+export function toolText(text: string): ToolResult {
+  return {
+    content: [{ type: "text", text }],
     details: undefined,
   };
 }
