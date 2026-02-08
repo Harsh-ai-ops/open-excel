@@ -1,6 +1,6 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { UserMessage } from "@mariozechner/pi-ai";
-import Dexie, { type Table } from "dexie";
+import { type DBSchema, type IDBPDatabase, openDB } from "idb";
 import { stripEnrichment } from "../message-utils";
 
 export interface ChatSession {
@@ -26,31 +26,50 @@ export interface SkillFile {
   data: Uint8Array;
 }
 
-class OpenExcelDB extends Dexie {
-  sessions!: Table<ChatSession, string>;
-  vfsFiles!: Table<VfsFile, string>;
-  skillFiles!: Table<SkillFile, string>;
-
-  constructor() {
-    super("OpenExcelDB_v3");
-    this.version(1).stores({
-      sessions: "id, workbookId, updatedAt",
-    });
-    this.version(2).stores({
-      sessions: "id, workbookId, updatedAt",
-      vfsFiles: "id, sessionId",
-    });
-    this.version(3).stores({
-      sessions: "id, workbookId, updatedAt",
-      vfsFiles: "id, sessionId",
-      skillFiles: "id, skillName",
-    });
-  }
+interface OpenExcelSchema extends DBSchema {
+  sessions: {
+    key: string;
+    value: ChatSession;
+    indexes: { workbookId: string; updatedAt: number };
+  };
+  vfsFiles: {
+    key: string;
+    value: VfsFile;
+    indexes: { sessionId: string };
+  };
+  skillFiles: {
+    key: string;
+    value: SkillFile;
+    indexes: { skillName: string };
+  };
 }
 
-const db = new OpenExcelDB();
+let dbPromise: Promise<IDBPDatabase<OpenExcelSchema>> | null = null;
 
-export { db };
+function getDb(): Promise<IDBPDatabase<OpenExcelSchema>> {
+  if (!dbPromise) {
+    // Dexie used version(3) which maps to IndexedDB version 30.
+    // We must open at >=30 to be compatible with existing databases.
+    dbPromise = openDB<OpenExcelSchema>("OpenExcelDB_v3", 30, {
+      upgrade(db, oldVersion) {
+        if (oldVersion < 10) {
+          const sessions = db.createObjectStore("sessions", { keyPath: "id" });
+          sessions.createIndex("workbookId", "workbookId");
+          sessions.createIndex("updatedAt", "updatedAt");
+        }
+        if (oldVersion < 20) {
+          const vfsFiles = db.createObjectStore("vfsFiles", { keyPath: "id" });
+          vfsFiles.createIndex("sessionId", "sessionId");
+        }
+        if (oldVersion < 30) {
+          const skillFiles = db.createObjectStore("skillFiles", { keyPath: "id" });
+          skillFiles.createIndex("skillName", "skillName");
+        }
+      },
+    });
+  }
+  return dbPromise;
+}
 
 function extractUserText(msg: AgentMessage): string | null {
   if (msg.role !== "user") return null;
@@ -93,15 +112,17 @@ export async function getOrCreateWorkbookId(): Promise<string> {
 }
 
 export async function listSessions(workbookId: string): Promise<ChatSession[]> {
-  const sessions = await db.sessions.where("workbookId").equals(workbookId).reverse().sortBy("updatedAt");
-  // breaking: old sessions will be blanked out
+  const db = await getDb();
+  const sessions = await db.getAllFromIndex("sessions", "workbookId", workbookId);
   for (const s of sessions) {
     if (!s.agentMessages) s.agentMessages = [];
   }
+  sessions.sort((a, b) => b.updatedAt - a.updatedAt);
   return sessions;
 }
 
 export async function createSession(workbookId: string, name?: string): Promise<ChatSession> {
+  const db = await getDb();
   const now = Date.now();
   const session: ChatSession = {
     id: crypto.randomUUID(),
@@ -111,14 +132,14 @@ export async function createSession(workbookId: string, name?: string): Promise<
     createdAt: now,
     updatedAt: now,
   };
-  await db.sessions.add(session);
+  await db.add("sessions", session);
   return session;
 }
 
 export async function getSession(sessionId: string): Promise<ChatSession | undefined> {
-  const session = await db.sessions.get(sessionId);
+  const db = await getDb();
+  const session = await db.get("sessions", sessionId);
   if (session && !session.agentMessages) {
-    // breaking: old sessions will be blanked out
     session.agentMessages = [];
   }
   return session;
@@ -126,7 +147,8 @@ export async function getSession(sessionId: string): Promise<ChatSession | undef
 
 export async function saveSession(sessionId: string, agentMessages: AgentMessage[]): Promise<void> {
   console.log("[DB] saveSession:", sessionId, "agentMessages:", agentMessages.length);
-  const session = await db.sessions.get(sessionId);
+  const db = await getDb();
+  const session = await db.get("sessions", sessionId);
   if (!session) {
     console.error("[DB] Session not found for save:", sessionId);
     return;
@@ -136,7 +158,7 @@ export async function saveSession(sessionId: string, agentMessages: AgentMessage
     const derivedName = deriveSessionName(agentMessages);
     if (derivedName) name = derivedName;
   }
-  await db.sessions.put({
+  await db.put("sessions", {
     ...session,
     agentMessages,
     name,
@@ -146,14 +168,16 @@ export async function saveSession(sessionId: string, agentMessages: AgentMessage
 }
 
 export async function renameSession(sessionId: string, name: string): Promise<void> {
-  const session = await db.sessions.get(sessionId);
+  const db = await getDb();
+  const session = await db.get("sessions", sessionId);
   if (session) {
-    await db.sessions.put({ ...session, name });
+    await db.put("sessions", { ...session, name });
   }
 }
 
 export async function deleteSession(sessionId: string): Promise<void> {
-  await db.sessions.delete(sessionId);
+  const db = await getDb();
+  await db.delete("sessions", sessionId);
 }
 
 export async function getOrCreateCurrentSession(workbookId: string): Promise<ChatSession> {
@@ -168,62 +192,85 @@ export async function getOrCreateCurrentSession(workbookId: string): Promise<Cha
 
 export async function saveVfsFiles(sessionId: string, files: { path: string; data: Uint8Array }[]): Promise<void> {
   console.log("[DB] saveVfsFiles:", sessionId, "files:", files.length);
-  await db.transaction("rw", db.vfsFiles, async () => {
-    await db.vfsFiles.where("sessionId").equals(sessionId).delete();
-    if (files.length > 0) {
-      await db.vfsFiles.bulkAdd(
-        files.map((f) => ({
-          id: `${sessionId}:${f.path}`,
-          sessionId,
-          path: f.path,
-          data: f.data,
-        })),
-      );
-    }
-  });
+  const db = await getDb();
+  const tx = db.transaction("vfsFiles", "readwrite");
+  const store = tx.store;
+  const existing = await store.index("sessionId").getAllKeys(sessionId);
+  for (const key of existing) {
+    await store.delete(key);
+  }
+  for (const f of files) {
+    await store.add({
+      id: `${sessionId}:${f.path}`,
+      sessionId,
+      path: f.path,
+      data: f.data,
+    });
+  }
+  await tx.done;
 }
 
 export async function loadVfsFiles(sessionId: string): Promise<{ path: string; data: Uint8Array }[]> {
-  const rows = await db.vfsFiles.where("sessionId").equals(sessionId).toArray();
+  const db = await getDb();
+  const rows = await db.getAllFromIndex("vfsFiles", "sessionId", sessionId);
   console.log("[DB] loadVfsFiles:", sessionId, "files:", rows.length);
   return rows.map((r) => ({ path: r.path, data: r.data }));
 }
 
 export async function deleteVfsFiles(sessionId: string): Promise<void> {
-  await db.vfsFiles.where("sessionId").equals(sessionId).delete();
+  const db = await getDb();
+  const tx = db.transaction("vfsFiles", "readwrite");
+  const keys = await tx.store.index("sessionId").getAllKeys(sessionId);
+  for (const key of keys) {
+    await tx.store.delete(key);
+  }
+  await tx.done;
 }
 
 export async function saveSkillFiles(skillName: string, files: { path: string; data: Uint8Array }[]): Promise<void> {
-  await db.transaction("rw", db.skillFiles, async () => {
-    await db.skillFiles.where("skillName").equals(skillName).delete();
-    if (files.length > 0) {
-      await db.skillFiles.bulkAdd(
-        files.map((f) => ({
-          id: `${skillName}:${f.path}`,
-          skillName,
-          path: f.path,
-          data: f.data,
-        })),
-      );
-    }
-  });
+  const db = await getDb();
+  const tx = db.transaction("skillFiles", "readwrite");
+  const store = tx.store;
+  const existing = await store.index("skillName").getAllKeys(skillName);
+  for (const key of existing) {
+    await store.delete(key);
+  }
+  for (const f of files) {
+    await store.add({
+      id: `${skillName}:${f.path}`,
+      skillName,
+      path: f.path,
+      data: f.data,
+    });
+  }
+  await tx.done;
 }
 
 export async function loadSkillFiles(skillName: string): Promise<{ path: string; data: Uint8Array }[]> {
-  const rows = await db.skillFiles.where("skillName").equals(skillName).toArray();
+  const db = await getDb();
+  const rows = await db.getAllFromIndex("skillFiles", "skillName", skillName);
   return rows.map((r) => ({ path: r.path, data: r.data }));
 }
 
 export async function loadAllSkillFiles(): Promise<{ skillName: string; path: string; data: Uint8Array }[]> {
-  const rows = await db.skillFiles.toArray();
+  const db = await getDb();
+  const rows = await db.getAll("skillFiles");
   return rows.map((r) => ({ skillName: r.skillName, path: r.path, data: r.data }));
 }
 
 export async function deleteSkillFiles(skillName: string): Promise<void> {
-  await db.skillFiles.where("skillName").equals(skillName).delete();
+  const db = await getDb();
+  const tx = db.transaction("skillFiles", "readwrite");
+  const keys = await tx.store.index("skillName").getAllKeys(skillName);
+  for (const key of keys) {
+    await tx.store.delete(key);
+  }
+  await tx.done;
 }
 
 export async function listSkillNames(): Promise<string[]> {
-  const keys = await db.skillFiles.orderBy("skillName").uniqueKeys();
-  return keys as string[];
+  const db = await getDb();
+  const rows = await db.getAll("skillFiles");
+  const names = new Set(rows.map((r) => r.skillName));
+  return [...names].sort();
 }

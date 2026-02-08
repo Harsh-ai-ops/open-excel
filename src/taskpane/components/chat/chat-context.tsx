@@ -717,8 +717,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (prevStreamingRef.current && !state.isStreaming && currentSessionIdRef.current) {
       const sessionId = currentSessionIdRef.current;
       const agentMessages = agentRef.current?.state.messages ?? [];
-      // Snapshot VFS first (returns native Promise), then pass result to Dexie.
-      // Never nest Dexie calls inside non-Dexie .then() — breaks PSD zone tracking in Office SES sandbox.
+      // Snapshot VFS first (returns native Promise), then save to IndexedDB.
       (async () => {
         try {
           const vfsFiles = await snapshotVfs();

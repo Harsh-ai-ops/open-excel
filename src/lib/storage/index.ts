@@ -1,7 +1,6 @@
 export type { ChatSession, SkillFile } from "./db";
 export {
   createSession,
-  db,
   deleteSession,
   deleteSkillFiles,
   deleteVfsFiles,

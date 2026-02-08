@@ -63,7 +63,7 @@ open-excel/
 │   │   ├── oauth/index.ts          # OAuth PKCE (Anthropic, OpenAI Codex)
 │   │   ├── skills/index.ts         # Skill install/uninstall/prompt injection
 │   │   ├── storage/
-│   │   │   ├── db.ts              # Dexie IndexedDB (sessions, VFS files, skills)
+│   │   │   ├── db.ts              # IndexedDB via idb (sessions, VFS files, skills)
 │   │   │   └── index.ts           # Storage re-exports
 │   │   ├── provider-config.ts      # Provider config load/save, custom endpoints
 │   │   ├── message-utils.ts        # AgentMessage → ChatMessage conversion, stats
@@ -189,7 +189,7 @@ User settings stored in browser localStorage:
 | `openexcel-provider-config` | `{ provider, apiKey, model, useProxy, proxyUrl, thinking, followMode, apiType, customBaseUrl, authMethod }` |
 | `openexcel-oauth-credentials` | `{ [provider]: { refresh, access, expires } }`                                                   |
 
-Session data (messages, VFS files, skills) stored in IndexedDB via Dexie (`OpenExcelDB_v3`).
+Session data (messages, VFS files, skills) stored in IndexedDB via `idb` (`OpenExcelDB_v3`).
 
 ## Excel API Usage
 

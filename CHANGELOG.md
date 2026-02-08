@@ -22,6 +22,7 @@
 
 ### Chores
 
+- Replaced Dexie with `idb` for IndexedDB access — Dexie's global `Promise` patching is incompatible with SES `lockdown()`, which froze `Promise` and broke all DB operations after `eval_officejs` was used.
 - Removed dead scaffold files (`hero-list.tsx`, `text-insertion.tsx`, `header.tsx`).
 - Removed old crypto shims (no longer needed with Vite polyfills).
 - IndexedDB schema upgraded to v3 with `vfsFiles` and `skillFiles` tables.
