@@ -319,6 +319,121 @@ const pdfToText: CustomCommand = {
     }),
 };
 
+function parsePageRanges(spec: string, maxPage: number): Set<number> {
+  const pages = new Set<number>();
+  for (const part of spec.split(",")) {
+    const trimmed = part.trim();
+    const rangeParts = trimmed.split("-");
+    if (rangeParts.length === 2) {
+      const start = Math.max(1, Number.parseInt(rangeParts[0], 10));
+      const end = Math.min(maxPage, Number.parseInt(rangeParts[1], 10));
+      if (!Number.isNaN(start) && !Number.isNaN(end)) {
+        for (let i = start; i <= end; i++) pages.add(i);
+      }
+    } else {
+      const p = Number.parseInt(trimmed, 10);
+      if (!Number.isNaN(p) && p >= 1 && p <= maxPage) pages.add(p);
+    }
+  }
+  return pages;
+}
+
+const pdfToImages: CustomCommand = {
+  name: "pdf-to-images",
+  load: async () =>
+    defineCommand("pdf-to-images", async (args, ctx) => {
+      const positional = args.filter((a) => !a.startsWith("--"));
+      const scaleArg = args.find((a) => a.startsWith("--scale="));
+      const pagesArg = args.find((a) => a.startsWith("--pages="));
+
+      if (positional.length < 2) {
+        return {
+          stdout: "",
+          stderr:
+            "Usage: pdf-to-images <file> <outdir> [--scale=N] [--pages=1,3,5-8]\n  file    - Path to PDF file in VFS\n  outdir  - Output directory for PNG images\n  --scale - Render scale factor (default: 2)\n  --pages - Page selection (e.g. 1,3,5-8). Default: all\n",
+          exitCode: 1,
+        };
+      }
+
+      const [filePath, outDir] = positional;
+      const scale = scaleArg ? Number.parseFloat(scaleArg.split("=")[1]) : 2;
+
+      if (Number.isNaN(scale) || scale <= 0 || scale > 5) {
+        return { stdout: "", stderr: "Scale must be between 0 and 5", exitCode: 1 };
+      }
+
+      try {
+        const { data } = await resolveVfsPath(ctx, filePath);
+        await import("pdfjs-dist/build/pdf.worker.mjs");
+        const pdfjsLib = await import("pdfjs-dist");
+
+        const doc = await pdfjsLib.getDocument({
+          data,
+          useWorkerFetch: false,
+          isEvalSupported: false,
+          useSystemFonts: true,
+        }).promise;
+
+        const selectedPages = pagesArg
+          ? parsePageRanges(pagesArg.split("=")[1], doc.numPages)
+          : new Set(Array.from({ length: doc.numPages }, (_, i) => i + 1));
+
+        if (selectedPages.size === 0) {
+          return { stdout: "", stderr: "No valid pages in selection", exitCode: 1 };
+        }
+
+        const resolvedDir = outDir.startsWith("/") ? outDir : `${ctx.cwd}/${outDir}`;
+        try {
+          await ctx.fs.mkdir(resolvedDir, { recursive: true });
+        } catch {
+          // may exist
+        }
+
+        const outputs: string[] = [];
+        const sortedPages = [...selectedPages].sort((a, b) => a - b);
+
+        for (const pageNum of sortedPages) {
+          const page = await doc.getPage(pageNum);
+          const viewport = page.getViewport({ scale });
+
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.floor(viewport.width);
+          canvas.height = Math.floor(viewport.height);
+          const canvasCtx = canvas.getContext("2d");
+          if (!canvasCtx) throw new Error("Failed to create canvas 2D context");
+
+          await page.render({ canvasContext: canvasCtx, canvas, viewport }).promise;
+
+          const pngData = await new Promise<Uint8Array>((resolve, reject) => {
+            canvas.toBlob((blob) => {
+              if (!blob) return reject(new Error("Canvas toBlob failed"));
+              blob.arrayBuffer().then((buf) => resolve(new Uint8Array(buf)));
+            }, "image/png");
+          });
+
+          const pagePath = `${resolvedDir}/page-${pageNum}.png`;
+          await ctx.fs.writeFile(pagePath, pngData);
+          outputs.push(
+            `page-${pageNum}.png (${Math.round(pngData.length / 1024)}KB, ${canvas.width}×${canvas.height})`,
+          );
+
+          // Help GC
+          canvas.width = 0;
+          canvas.height = 0;
+        }
+
+        return {
+          stdout: `Converted ${outputs.length} page(s) from ${doc.numPages} total to ${outDir}/:\n${outputs.map((o) => `  ${o}`).join("\n")}`,
+          stderr: "",
+          exitCode: 0,
+        };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        return { stdout: "", stderr: msg, exitCode: 1 };
+      }
+    }),
+};
+
 const docxToText: CustomCommand = {
   name: "docx-to-text",
   load: async () =>
@@ -448,5 +563,5 @@ const xlsxToCsv: CustomCommand = {
 };
 
 export function getCustomCommands(): CustomCommand[] {
-  return [csvToSheet, sheetToCsv, pdfToText, docxToText, xlsxToCsv];
+  return [csvToSheet, sheetToCsv, pdfToText, pdfToImages, docxToText, xlsxToCsv];
 }

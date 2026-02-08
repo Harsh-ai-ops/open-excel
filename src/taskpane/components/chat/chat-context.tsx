@@ -124,6 +124,7 @@ FILES & SHELL:
     Fails if target cells already have data. Use --force to overwrite (confirm with user first).
   - sheet-to-csv <sheetId> [range] [file] — Export range to CSV. Defaults to full used range if no range given. Prints to stdout if no file given (pipeable).
   - pdf-to-text <file> <outfile> — Extract text from PDF to file. Use head/grep/tail to read selectively.
+  - pdf-to-images <file> <outdir> [--scale=N] [--pages=1,3,5-8] — Render PDF pages to PNG images. Use for scanned PDFs where text extraction won't work. Then use read to visually inspect the images.
   - docx-to-text <file> <outfile> — Extract text from DOCX to file.
   - xlsx-to-csv <file> <outfile> [sheet] — Convert XLSX/XLS/ODS sheet to CSV. Sheet by name or 0-based index.
 
