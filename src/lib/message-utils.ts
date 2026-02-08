@@ -42,8 +42,8 @@ export function stripEnrichment(content: string | { type: string; text?: string 
       .map((c) => c.text ?? "")
       .join("\n");
   }
-  text = text.replace(/^<wb_context>\n[\s\S]*?\n<\/wb_context>\n\n/, "");
   text = text.replace(/^<attachments>\n[\s\S]*?\n<\/attachments>\n\n/, "");
+  text = text.replace(/^<wb_context>\n[\s\S]*?\n<\/wb_context>\n\n/, "");
   return text;
 }
 
