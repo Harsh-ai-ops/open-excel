@@ -44,13 +44,81 @@ Download [`manifest.prod.xml`](./manifest.prod.xml) and follow the instructions 
 
 ---
 
+## Features
+
+### Spreadsheet Tools
+
+| Tool | Description |
+|------|-------------|
+| `get_cell_ranges` | Read cell values, formulas, and formatting |
+| `get_range_as_csv` | Pull data as CSV (great for analysis) |
+| `search_data` | Find text across the spreadsheet |
+| `get_all_objects` | List charts, pivot tables, etc. |
+| `set_cell_range` | Write values, formulas, and formatting |
+| `clear_cell_range` | Clear cells (content, formatting, or both) |
+| `copy_to` | Copy ranges with formula translation |
+| `modify_sheet_structure` | Insert/delete/hide/freeze rows/columns |
+| `modify_workbook_structure` | Create/delete/rename sheets |
+| `resize_range` | Adjust column widths and row heights |
+| `modify_object` | Create/update/delete charts and pivot tables |
+| `eval_officejs` | Execute arbitrary Office.js code within Excel.run context (escape hatch) |
+
+### File & Shell Tools
+
+| Tool | Description |
+|------|-------------|
+| `bash` | Execute commands in a sandboxed in-memory shell (pipes, loops, jq, awk, etc.) |
+| `read` | Read text files or images from the virtual filesystem |
+
+### CLI Commands
+
+Composable commands available inside the bash shell that bridge uploaded files and Excel:
+
+| Command | Description |
+|---------|-------------|
+| `csv-to-sheet` | Import a CSV file into a worksheet |
+| `sheet-to-csv` | Export a worksheet range to CSV |
+| `pdf-to-text` | Extract text from uploaded PDFs |
+| `docx-to-text` | Extract text from uploaded Word documents |
+| `xlsx-to-csv` | Convert uploaded Excel files to CSV |
+
+### File Uploads
+
+Upload files via the paperclip button or drag-and-drop onto the chat. Files are stored in an in-memory virtual filesystem at `/home/user/uploads/` and persisted per session.
+
+### Skills
+
+Install agent skills to extend the system prompt with specialized instructions. Skills are folders with a `SKILL.md` file containing YAML frontmatter (name + description). Manage skills in the Settings tab.
+
+### Providers & Authentication
+
+Supports all major LLM providers via [pi-ai](https://github.com/badlogic/pi-mono):
+
+- **API Key (BYOK)**: OpenAI, Anthropic, Google, Azure, OpenRouter, Groq, xAI, Cerebras, Mistral
+- **OAuth**: Anthropic (Claude Pro/Max), OpenAI Codex (ChatGPT Plus/Pro)
+- **Custom Endpoints**: Any OpenAI-compatible API (Ollama, vLLM, LMStudio, etc.)
+
+## Configuration
+
+On first use, open the Settings tab in the add-in to configure:
+
+1. **Provider** — Select a built-in provider or "Custom Endpoint"
+2. **Authentication** — Enter an API key, or use OAuth for Anthropic/OpenAI
+3. **Model** — Choose from the provider's model list (or enter a model ID for custom endpoints)
+4. **CORS Proxy** — Required for some providers (Anthropic, etc.) when running in the browser
+5. **Thinking Level** — Control extended thinking (None/Low/Medium/High)
+
+Settings are stored locally in the browser's localStorage. Session data (messages, uploaded files, skills) is stored in IndexedDB.
+
+---
+
 ## Development
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18 or higher recommended)
+- [Node.js](https://nodejs.org/) (v18+)
 - Microsoft Excel (desktop version)
-- pnpm (or npm/yarn)
+- pnpm
 
 ### Setup
 
@@ -74,14 +142,6 @@ Excel will launch automatically with the add-in loaded in the taskpane.
 pnpm stop
 ```
 
-### Deploy to Production
-
-Builds and deploys to Cloudflare Pages:
-
-```bash
-pnpm deploy
-```
-
 ### Other Commands
 
 | Command | Description |
@@ -89,54 +149,11 @@ pnpm deploy
 | `pnpm dev-server` | Start dev server only (https://localhost:3000) |
 | `pnpm build` | Production build |
 | `pnpm deploy` | Build and deploy to Cloudflare Pages |
-| `pnpm lint` | Run linter |
+| `pnpm lint` | Run Biome linter |
+| `pnpm format` | Format code with Biome |
 | `pnpm typecheck` | TypeScript type checking |
+| `pnpm check` | Typecheck + lint |
 | `pnpm validate` | Validate the Office manifest |
-
-## Claude for Excel Parity
-
-### Spreadsheet Tools (11)
-
-| Tool | Description |
-|------|-------------|
-| `get_cell_ranges` | Read cell values, formulas, and formatting |
-| `get_range_as_csv` | Pull data as CSV (great for analysis) |
-| `search_data` | Find text across the spreadsheet |
-| `get_all_objects` | List charts, pivot tables, etc. |
-| `set_cell_range` | Write values, formulas, and formatting |
-| `clear_cell_range` | Clear cells (content, formatting, or both) |
-| `copy_to` | Copy ranges with formula translation |
-| `modify_sheet_structure` | Insert/delete/hide/freeze rows/columns |
-| `modify_workbook_structure` | Create/delete/rename sheets |
-| `resize_range` | Adjust column widths and row heights |
-| `modify_object` | Create/update/delete charts and pivot tables |
-
-### Original Tools (1)
-
-| Tool | Description |
-|------|-------------|
-| `eval_officejs` | Execute arbitrary Office.js code within Excel.run context (escape hatch) |
-
-### Non-Spreadsheet Tools (4)
-
-These are not implemented for obvious reasons. I guess we can do it as BYOK w/ some sandbox & search API providers as well.
-
-| Tool | Description |
-|------|-------------|
-| `code_execution` | Python with RPC to the sheet (pandas, numpy, etc.) |
-| `text_editor_code_execution` | Create/edit files |
-| `bash_code_execution` | Run shell commands |
-| `web_search` | Search the internet for current info |
-
-## Configuration
-
-On first use, open the Settings tab in the add-in to configure:
-
-1. **Provider** - Select your LLM provider (OpenAI, Anthropic, Google, etc.)
-2. **API Key** - Enter your API key for the selected provider
-3. **Model** - Choose the model to use
-
-Settings are stored locally in the webview sidecar's localStorage.
 
 ## License
 
