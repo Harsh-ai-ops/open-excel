@@ -391,7 +391,23 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const activeApiKeyRef = useRef<string>("");
+  const configRef = useRef<ProviderConfig | null>(null);
+
+  const getActiveApiKey = useCallback(async (config: ProviderConfig): Promise<string> => {
+    if (config.authMethod !== "oauth") {
+      return config.apiKey;
+    }
+    const creds = loadOAuthCredentials(config.provider);
+    if (!creds) return config.apiKey;
+    if (Date.now() < creds.expires) {
+      return creds.access;
+    }
+    console.log("[Chat] Refreshing OAuth token before API call...");
+    const refreshed = await refreshOAuthToken(config.provider, creds.refresh, config.proxyUrl, config.useProxy);
+    saveOAuthCredentials(config.provider, refreshed);
+    console.log("[Chat] OAuth token refreshed");
+    return refreshed.access;
+  }, []);
 
   const applyConfig = useCallback(
     (config: ProviderConfig) => {
@@ -409,14 +425,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         }
       }
       contextWindow = baseModel.contextWindow;
-
-      // Set active API key (for OAuth, prefer stored access token)
-      if (config.authMethod === "oauth") {
-        const creds = loadOAuthCredentials(config.provider);
-        activeApiKeyRef.current = creds?.access || config.apiKey;
-      } else {
-        activeApiKeyRef.current = config.apiKey;
-      }
+      configRef.current = config;
 
       const proxiedModel = applyProxyToModel(baseModel, config);
       const existingMessages = agentRef.current?.state.messages ?? [];
@@ -441,10 +450,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           tools: EXCEL_TOOLS,
           messages: existingMessages,
         },
-        streamFn: (model, context, options) => {
+        streamFn: async (model, context, options) => {
+          const cfg = configRef.current ?? config;
+          const apiKey = await getActiveApiKey(cfg);
           return streamSimple(model, context, {
             ...options,
-            apiKey: activeApiKeyRef.current || config.apiKey,
+            apiKey,
           });
         },
       });
@@ -468,7 +479,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         sessionStats: { ...prev.sessionStats, contextWindow },
       }));
     },
-    [handleAgentEvent],
+    [handleAgentEvent, getActiveApiKey],
   );
 
   const setProviderConfig = useCallback(
@@ -538,36 +549,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         if (attachments && attachments.length > 0) {
           const paths = attachments.map((name) => `/home/user/uploads/${name}`).join("\n");
           promptContent = `<attachments>\n${paths}\n</attachments>\n\n${promptContent}`;
-        }
-
-        // Refresh OAuth token if needed
-        if (state.providerConfig?.authMethod === "oauth") {
-          try {
-            const creds = loadOAuthCredentials(state.providerConfig.provider);
-            if (creds && Date.now() >= creds.expires) {
-              console.log("[Chat] Refreshing OAuth token...");
-              const refreshed = await refreshOAuthToken(
-                state.providerConfig.provider,
-                creds.refresh,
-                state.providerConfig.proxyUrl,
-                state.providerConfig.useProxy,
-              );
-              saveOAuthCredentials(state.providerConfig.provider, refreshed);
-              activeApiKeyRef.current = refreshed.access;
-              console.log("[Chat] OAuth token refreshed");
-            } else if (creds) {
-              activeApiKeyRef.current = creds.access;
-            }
-          } catch (err) {
-            console.error("[Chat] OAuth token refresh failed:", err);
-            isStreamingRef.current = false;
-            setState((prev) => ({
-              ...prev,
-              isStreaming: false,
-              error: "OAuth token expired. Please re-login in Settings.",
-            }));
-            return;
-          }
         }
 
         await agent.prompt(promptContent);

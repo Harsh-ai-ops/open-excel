@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-02-08
+
+### Fixes
+
+- **OAuth token refresh during agent loops** — Token was only refreshed once at the start of a message, so multi-turn tool-use conversations could fail mid-stream if the access token expired. Token refresh now happens before every LLM call inside `streamFn`, matching pi's `AuthStorage.getApiKey()` pattern.
+
 ## [0.2.0] - 2026-02-08
 
 ### Features
