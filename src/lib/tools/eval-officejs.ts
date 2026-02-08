@@ -46,7 +46,8 @@ export const evalOfficeJsTool = defineTool({
       let dirtyRanges: DirtyRange[] = [];
 
       const result = await Excel.run(async (context) => {
-        const { trackedContext, getDirtyRanges } = createTrackedContext(context);
+        const { trackedContext, getDirtyRanges } =
+          createTrackedContext(context);
 
         const execResult = await sandboxedEval(params.code, {
           context: trackedContext,
@@ -61,13 +62,17 @@ export const evalOfficeJsTool = defineTool({
         dirtyRanges = [{ sheetId: -1, range: "*" }];
       }
 
-      const response: Record<string, unknown> = { success: true, result: result ?? null };
+      const response: Record<string, unknown> = {
+        success: true,
+        result: result ?? null,
+      };
       if (dirtyRanges.length > 0) {
         response._dirtyRanges = dirtyRanges;
       }
       return toolSuccess(response);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error executing code";
+      const message =
+        error instanceof Error ? error.message : "Unknown error executing code";
       return toolError(message);
     }
   },

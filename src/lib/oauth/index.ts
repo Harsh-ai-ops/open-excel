@@ -11,16 +11,27 @@ export type OAuthFlowState =
   | { step: "connected" }
   | { step: "error"; message: string };
 
-export const OAUTH_PROVIDERS: Record<string, { label: string; buttonText: string }> = {
-  anthropic: { label: "OAuth (Pro/Max)", buttonText: "Login with Claude Pro/Max" },
-  "openai-codex": { label: "OAuth (Plus/Pro)", buttonText: "Login with ChatGPT Plus/Pro" },
+export const OAUTH_PROVIDERS: Record<
+  string,
+  { label: string; buttonText: string }
+> = {
+  anthropic: {
+    label: "OAuth (Pro/Max)",
+    buttonText: "Login with Claude Pro/Max",
+  },
+  "openai-codex": {
+    label: "OAuth (Plus/Pro)",
+    buttonText: "Login with ChatGPT Plus/Pro",
+  },
 };
 
 // --- Credential Storage ---
 
 const OAUTH_STORAGE_KEY = "openexcel-oauth-credentials";
 
-export function loadOAuthCredentials(provider: string): OAuthCredentials | null {
+export function loadOAuthCredentials(
+  provider: string,
+): OAuthCredentials | null {
   try {
     const store = JSON.parse(localStorage.getItem(OAUTH_STORAGE_KEY) || "{}");
     return store[provider] || null;
@@ -29,7 +40,10 @@ export function loadOAuthCredentials(provider: string): OAuthCredentials | null 
   }
 }
 
-export function saveOAuthCredentials(provider: string, creds: OAuthCredentials) {
+export function saveOAuthCredentials(
+  provider: string,
+  creds: OAuthCredentials,
+) {
   try {
     const store = JSON.parse(localStorage.getItem(OAUTH_STORAGE_KEY) || "{}");
     store[provider] = creds;
@@ -59,7 +73,10 @@ function base64urlEncode(bytes: Uint8Array): string {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }
 
-export async function generatePKCE(): Promise<{ verifier: string; challenge: string }> {
+export async function generatePKCE(): Promise<{
+  verifier: string;
+  challenge: string;
+}> {
   const verifierBytes = new Uint8Array(32);
   crypto.getRandomValues(verifierBytes);
   const verifier = base64urlEncode(verifierBytes);
@@ -77,10 +94,13 @@ function createRandomState(): string {
 
 // --- Provider Constants ---
 
-const ANTHROPIC_CLIENT_ID = atob("OWQxYzI1MGEtZTYxYi00NGQ5LTg4ZWQtNTk0NGQxOTYyZjVl");
+const ANTHROPIC_CLIENT_ID = atob(
+  "OWQxYzI1MGEtZTYxYi00NGQ5LTg4ZWQtNTk0NGQxOTYyZjVl",
+);
 const ANTHROPIC_AUTHORIZE_URL = "https://claude.ai/oauth/authorize";
 const ANTHROPIC_TOKEN_URL = "https://console.anthropic.com/v1/oauth/token";
-const ANTHROPIC_REDIRECT_URI = "https://console.anthropic.com/oauth/code/callback";
+const ANTHROPIC_REDIRECT_URI =
+  "https://console.anthropic.com/oauth/code/callback";
 const ANTHROPIC_SCOPES = "org:create_api_key user:profile user:inference";
 
 const OPENAI_CODEX_CLIENT_ID = atob("YXBwX0VNb2FtRUVaNzNmMENrWGFYcDdocmFubg==");
@@ -127,7 +147,10 @@ export function buildAuthorizationUrl(
 
 // --- Input Parsing ---
 
-function parseAuthorizationInput(input: string): { code?: string; state?: string } {
+function parseAuthorizationInput(input: string): {
+  code?: string;
+  state?: string;
+} {
   const value = input.trim();
   if (!value) return {};
   try {
@@ -155,8 +178,14 @@ function parseAuthorizationInput(input: string): { code?: string; state?: string
 
 // --- Proxy URL helper ---
 
-function buildProxiedUrl(baseUrl: string, useProxy: boolean, proxyUrl: string): string {
-  return useProxy && proxyUrl ? `${proxyUrl}/?url=${encodeURIComponent(baseUrl)}` : baseUrl;
+function buildProxiedUrl(
+  baseUrl: string,
+  useProxy: boolean,
+  proxyUrl: string,
+): string {
+  return useProxy && proxyUrl
+    ? `${proxyUrl}/?url=${encodeURIComponent(baseUrl)}`
+    : baseUrl;
 }
 
 // --- Token Refresh ---
@@ -176,8 +205,13 @@ async function refreshAnthropicOAuth(
       refresh_token: refreshToken,
     }),
   });
-  if (!response.ok) throw new Error(`Anthropic token refresh failed: ${response.status}`);
-  const data = (await response.json()) as { access_token: string; refresh_token: string; expires_in: number };
+  if (!response.ok)
+    throw new Error(`Anthropic token refresh failed: ${response.status}`);
+  const data = (await response.json()) as {
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+  };
   return {
     refresh: data.refresh_token,
     access: data.access_token,
@@ -200,9 +234,18 @@ async function refreshOpenAICodexOAuth(
       client_id: OPENAI_CODEX_CLIENT_ID,
     }),
   });
-  if (!response.ok) throw new Error(`OpenAI Codex token refresh failed: ${response.status}`);
-  const data = (await response.json()) as { access_token?: string; refresh_token?: string; expires_in?: number };
-  if (!data.access_token || !data.refresh_token || typeof data.expires_in !== "number") {
+  if (!response.ok)
+    throw new Error(`OpenAI Codex token refresh failed: ${response.status}`);
+  const data = (await response.json()) as {
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+  };
+  if (
+    !data.access_token ||
+    !data.refresh_token ||
+    typeof data.expires_in !== "number"
+  ) {
     throw new Error("OpenAI Codex token refresh: missing fields in response");
   }
   return {
@@ -234,9 +277,11 @@ export async function exchangeOAuthCode(params: {
   useProxy: boolean;
   proxyUrl: string;
 }): Promise<OAuthCredentials> {
-  const { provider, rawInput, verifier, expectedState, useProxy, proxyUrl } = params;
+  const { provider, rawInput, verifier, expectedState, useProxy, proxyUrl } =
+    params;
   const parsed = parseAuthorizationInput(rawInput);
-  if (!parsed.code) throw new Error("Could not extract authorization code from input");
+  if (!parsed.code)
+    throw new Error("Could not extract authorization code from input");
   if (expectedState && parsed.state && parsed.state !== expectedState) {
     throw new Error("State mismatch — possible CSRF. Please try again.");
   }
@@ -258,8 +303,16 @@ export async function exchangeOAuthCode(params: {
       const text = await response.text().catch(() => "");
       throw new Error(`Token exchange failed (${response.status}): ${text}`);
     }
-    const data = (await response.json()) as { access_token?: string; refresh_token?: string; expires_in?: number };
-    if (!data.access_token || !data.refresh_token || typeof data.expires_in !== "number") {
+    const data = (await response.json()) as {
+      access_token?: string;
+      refresh_token?: string;
+      expires_in?: number;
+    };
+    if (
+      !data.access_token ||
+      !data.refresh_token ||
+      typeof data.expires_in !== "number"
+    ) {
       throw new Error("Token response missing required fields");
     }
     return {
@@ -287,7 +340,11 @@ export async function exchangeOAuthCode(params: {
     const text = await response.text().catch(() => "");
     throw new Error(`Token exchange failed (${response.status}): ${text}`);
   }
-  const data = (await response.json()) as { access_token: string; refresh_token: string; expires_in: number };
+  const data = (await response.json()) as {
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+  };
   return {
     refresh: data.refresh_token,
     access: data.access_token,

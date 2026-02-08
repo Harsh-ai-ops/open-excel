@@ -1,6 +1,17 @@
 import { Type } from "@sinclair/typebox";
-import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, truncateHead } from "../truncate";
-import { fileExists, getFileType, listUploads, readFileBuffer, toBase64 } from "../vfs";
+import {
+  DEFAULT_MAX_BYTES,
+  DEFAULT_MAX_LINES,
+  formatSize,
+  truncateHead,
+} from "../truncate";
+import {
+  fileExists,
+  getFileType,
+  listUploads,
+  readFileBuffer,
+  toBase64,
+} from "../vfs";
 import { defineTool, toolError, toolText } from "./types";
 
 export const readTool = defineTool({
@@ -38,13 +49,18 @@ export const readTool = defineTool({
   execute: async (_toolCallId, params) => {
     try {
       const path = params.path;
-      const fullPath = path.startsWith("/") ? path : `/home/user/uploads/${path}`;
+      const fullPath = path.startsWith("/")
+        ? path
+        : `/home/user/uploads/${path}`;
 
       // Check if file exists
       if (!(await fileExists(fullPath))) {
         // List available files to help the user
         const uploads = await listUploads();
-        const hint = uploads.length > 0 ? `Available files: ${uploads.join(", ")}` : "No files uploaded yet.";
+        const hint =
+          uploads.length > 0
+            ? `Available files: ${uploads.join(", ")}`
+            : "No files uploaded yet.";
         return toolError(`File not found: ${fullPath}. ${hint}`);
       }
 
@@ -57,7 +73,10 @@ export const readTool = defineTool({
         const base64 = toBase64(data);
         return {
           content: [
-            { type: "text" as const, text: `Read image file: ${filename} [${mimeType}]` },
+            {
+              type: "text" as const,
+              text: `Read image file: ${filename} [${mimeType}]`,
+            },
             { type: "image" as const, data: base64, mimeType },
           ],
           details: undefined,
@@ -77,7 +96,9 @@ export const readTool = defineTool({
       const startLineDisplay = startLine + 1;
 
       if (startLine >= allLines.length) {
-        return toolError(`Offset ${params.offset} is beyond end of file (${allLines.length} lines total)`);
+        return toolError(
+          `Offset ${params.offset} is beyond end of file (${allLines.length} lines total)`,
+        );
       }
 
       // Apply limit param if specified
@@ -106,7 +127,10 @@ export const readTool = defineTool({
         } else {
           outputText += `\n\n[Showing lines ${startLineDisplay}-${endLineDisplay} of ${totalFileLines} (${formatSize(DEFAULT_MAX_BYTES)} limit). Use offset=${nextOffset} to continue.]`;
         }
-      } else if (userLimitedLines !== undefined && startLine + userLimitedLines < allLines.length) {
+      } else if (
+        userLimitedLines !== undefined &&
+        startLine + userLimitedLines < allLines.length
+      ) {
         const remaining = allLines.length - (startLine + userLimitedLines);
         const nextOffset = startLine + userLimitedLines + 1;
         outputText = truncation.content;
@@ -117,7 +141,8 @@ export const readTool = defineTool({
 
       return toolText(outputText);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error reading file";
+      const message =
+        error instanceof Error ? error.message : "Unknown error reading file";
       return toolError(message);
     }
   },

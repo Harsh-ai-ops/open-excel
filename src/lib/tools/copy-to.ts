@@ -12,7 +12,9 @@ export const copyToTool = defineTool({
   parameters: Type.Object({
     sheetId: Type.Number({ description: "The worksheet ID (1-based index)" }),
     sourceRange: Type.String({ description: "Source range in A1 notation" }),
-    destinationRange: Type.String({ description: "Destination range in A1 notation" }),
+    destinationRange: Type.String({
+      description: "Destination range in A1 notation",
+    }),
     explanation: Type.Optional(
       Type.String({
         description: "Brief explanation (max 50 chars)",
@@ -25,10 +27,15 @@ export const copyToTool = defineTool({
   },
   execute: async (_toolCallId, params) => {
     try {
-      const result = await copyTo(params.sheetId, params.sourceRange, params.destinationRange);
+      const result = await copyTo(
+        params.sheetId,
+        params.sourceRange,
+        params.destinationRange,
+      );
       return toolSuccess(result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error copying range";
+      const message =
+        error instanceof Error ? error.message : "Unknown error copying range";
       return toolError(message);
     }
   },

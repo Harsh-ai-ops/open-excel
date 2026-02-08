@@ -72,7 +72,11 @@ function parseStartCell(startCell: string): { col: number; row: number } {
   return { col, row };
 }
 
-function buildRangeAddress(startCell: string, rows: number, cols: number): string {
+function buildRangeAddress(
+  startCell: string,
+  rows: number,
+  cols: number,
+): string {
   const { col, row } = parseStartCell(startCell);
   const endCol = columnIndexToLetter(col + cols - 1);
   const endRow = row + rows;
@@ -105,16 +109,26 @@ const csvToSheet: Command = defineCommand("csv-to-sheet", async (args, ctx) => {
   const [filePath, sheetIdStr, startCell = "A1"] = positional;
   const sheetId = Number.parseInt(sheetIdStr, 10);
   if (Number.isNaN(sheetId)) {
-    return { stdout: "", stderr: `Invalid sheetId: ${sheetIdStr}`, exitCode: 1 };
+    return {
+      stdout: "",
+      stderr: `Invalid sheetId: ${sheetIdStr}`,
+      exitCode: 1,
+    };
   }
 
   const upperStartCell = startCell.toUpperCase();
   if (!/^[A-Z]+\d+$/.test(upperStartCell)) {
-    return { stdout: "", stderr: `Invalid start cell: ${startCell}`, exitCode: 1 };
+    return {
+      stdout: "",
+      stderr: `Invalid start cell: ${startCell}`,
+      exitCode: 1,
+    };
   }
 
   try {
-    const resolvedPath = filePath.startsWith("/") ? filePath : `${ctx.cwd}/${filePath}`;
+    const resolvedPath = filePath.startsWith("/")
+      ? filePath
+      : `${ctx.cwd}/${filePath}`;
     const content = await ctx.fs.readFile(resolvedPath);
     const rows = parseCsv(content);
 
@@ -131,7 +145,9 @@ const csvToSheet: Command = defineCommand("csv-to-sheet", async (args, ctx) => {
     });
 
     const rangeAddr = buildRangeAddress(upperStartCell, rows.length, maxCols);
-    const result = await setCellRange(sheetId, rangeAddr, cells, { allowOverwrite: force });
+    const result = await setCellRange(sheetId, rangeAddr, cells, {
+      allowOverwrite: force,
+    });
 
     return {
       stdout: `Imported ${rows.length} rows × ${maxCols} columns into sheet ${sheetId} at ${upperStartCell} (${rangeAddr}). ${result.cellsWritten} cells written.`,
@@ -174,7 +190,11 @@ const sheetToCsv: Command = defineCommand("sheet-to-csv", async (args, ctx) => {
   const sheetIdStr = args[0];
   const sheetId = Number.parseInt(sheetIdStr, 10);
   if (Number.isNaN(sheetId)) {
-    return { stdout: "", stderr: `Invalid sheetId: ${sheetIdStr}`, exitCode: 1 };
+    return {
+      stdout: "",
+      stderr: `Invalid sheetId: ${sheetIdStr}`,
+      exitCode: 1,
+    };
   }
 
   let rangeAddr: string | undefined;
@@ -197,7 +217,11 @@ const sheetToCsv: Command = defineCommand("sheet-to-csv", async (args, ctx) => {
     if (!rangeAddr) {
       const usedAddr = await getUsedRangeAddress(sheetId);
       if (!usedAddr) {
-        return { stdout: "", stderr: "Sheet is empty (no used range)", exitCode: 1 };
+        return {
+          stdout: "",
+          stderr: "Sheet is empty (no used range)",
+          exitCode: 1,
+        };
       }
       rangeAddr = usedAddr;
     }
@@ -205,7 +229,9 @@ const sheetToCsv: Command = defineCommand("sheet-to-csv", async (args, ctx) => {
     const result = await getRangeAsCsv(sheetId, rangeAddr, { maxRows: 50000 });
 
     if (outFile) {
-      const resolvedPath = outFile.startsWith("/") ? outFile : `${ctx.cwd}/${outFile}`;
+      const resolvedPath = outFile.startsWith("/")
+        ? outFile
+        : `${ctx.cwd}/${outFile}`;
       // Ensure parent directory exists
       const dir = resolvedPath.substring(0, resolvedPath.lastIndexOf("/"));
       if (dir && dir !== "/") {
@@ -216,7 +242,9 @@ const sheetToCsv: Command = defineCommand("sheet-to-csv", async (args, ctx) => {
         }
       }
       await ctx.fs.writeFile(resolvedPath, result.csv);
-      const moreNote = result.hasMore ? " (truncated, more rows available)" : "";
+      const moreNote = result.hasMore
+        ? " (truncated, more rows available)"
+        : "";
       return {
         stdout: `Exported ${result.rowCount} rows × ${result.columnCount} columns from "${result.sheetName}" to ${outFile}${moreNote}`,
         stderr: "",
@@ -240,7 +268,9 @@ async function resolveVfsPath(
   ctx: { cwd: string; fs: { readFileBuffer(p: string): Promise<Uint8Array> } },
   filePath: string,
 ): Promise<{ path: string; data: Uint8Array }> {
-  const resolved = filePath.startsWith("/") ? filePath : `${ctx.cwd}/${filePath}`;
+  const resolved = filePath.startsWith("/")
+    ? filePath
+    : `${ctx.cwd}/${filePath}`;
   const data = await ctx.fs.readFileBuffer(resolved);
   return { path: resolved, data };
 }
@@ -248,7 +278,10 @@ async function resolveVfsPath(
 async function writeVfsOutput(
   ctx: {
     cwd: string;
-    fs: { mkdir(p: string, o: { recursive: boolean }): Promise<void>; writeFile(p: string, c: string): Promise<void> };
+    fs: {
+      mkdir(p: string, o: { recursive: boolean }): Promise<void>;
+      writeFile(p: string, c: string): Promise<void>;
+    };
   },
   outFile: string,
   content: string,
@@ -359,7 +392,11 @@ const pdfToImages: CustomCommand = {
       const scale = scaleArg ? Number.parseFloat(scaleArg.split("=")[1]) : 2;
 
       if (Number.isNaN(scale) || scale <= 0 || scale > 5) {
-        return { stdout: "", stderr: "Scale must be between 0 and 5", exitCode: 1 };
+        return {
+          stdout: "",
+          stderr: "Scale must be between 0 and 5",
+          exitCode: 1,
+        };
       }
 
       try {
@@ -379,10 +416,16 @@ const pdfToImages: CustomCommand = {
           : new Set(Array.from({ length: doc.numPages }, (_, i) => i + 1));
 
         if (selectedPages.size === 0) {
-          return { stdout: "", stderr: "No valid pages in selection", exitCode: 1 };
+          return {
+            stdout: "",
+            stderr: "No valid pages in selection",
+            exitCode: 1,
+          };
         }
 
-        const resolvedDir = outDir.startsWith("/") ? outDir : `${ctx.cwd}/${outDir}`;
+        const resolvedDir = outDir.startsWith("/")
+          ? outDir
+          : `${ctx.cwd}/${outDir}`;
         try {
           await ctx.fs.mkdir(resolvedDir, { recursive: true });
         } catch {
@@ -402,7 +445,8 @@ const pdfToImages: CustomCommand = {
           const canvasCtx = canvas.getContext("2d");
           if (!canvasCtx) throw new Error("Failed to create canvas 2D context");
 
-          await page.render({ canvasContext: canvasCtx, canvas, viewport }).promise;
+          await page.render({ canvasContext: canvasCtx, canvas, viewport })
+            .promise;
 
           const pngData = await new Promise<Uint8Array>((resolve, reject) => {
             canvas.toBlob((blob) => {
@@ -452,7 +496,9 @@ const docxToText: CustomCommand = {
       try {
         const { data } = await resolveVfsPath(ctx, filePath);
         const mammoth = await import("mammoth");
-        const result = await mammoth.extractRawText({ arrayBuffer: data.buffer as ArrayBuffer });
+        const result = await mammoth.extractRawText({
+          arrayBuffer: data.buffer as ArrayBuffer,
+        });
 
         await writeVfsOutput(ctx, outFile, result.value);
 
@@ -495,7 +541,11 @@ const xlsxToCsv: CustomCommand = {
             sheetName = sheetArg;
           } else {
             const idx = Number.parseInt(sheetArg, 10);
-            if (!Number.isNaN(idx) && idx >= 0 && idx < workbook.SheetNames.length) {
+            if (
+              !Number.isNaN(idx) &&
+              idx >= 0 &&
+              idx < workbook.SheetNames.length
+            ) {
               sheetName = workbook.SheetNames[idx];
             } else {
               return {
@@ -508,7 +558,11 @@ const xlsxToCsv: CustomCommand = {
 
           const sheet = workbook.Sheets[sheetName];
           if (!sheet) {
-            return { stdout: "", stderr: `Sheet "${sheetName}" not found`, exitCode: 1 };
+            return {
+              stdout: "",
+              stderr: `Sheet "${sheetName}" not found`,
+              exitCode: 1,
+            };
           }
 
           const csv = XLSX.utils.sheet_to_csv(sheet);
@@ -563,5 +617,12 @@ const xlsxToCsv: CustomCommand = {
 };
 
 export function getCustomCommands(): CustomCommand[] {
-  return [csvToSheet, sheetToCsv, pdfToText, pdfToImages, docxToText, xlsxToCsv];
+  return [
+    csvToSheet,
+    sheetToCsv,
+    pdfToText,
+    pdfToImages,
+    docxToText,
+    xlsxToCsv,
+  ];
 }

@@ -1,5 +1,10 @@
 import { Type } from "@sinclair/typebox";
-import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, truncateTail } from "../truncate";
+import {
+  DEFAULT_MAX_BYTES,
+  DEFAULT_MAX_LINES,
+  formatSize,
+  truncateTail,
+} from "../truncate";
 import { getBash } from "../vfs";
 import { defineTool, toolError, toolSuccess } from "./types";
 
@@ -69,7 +74,10 @@ export const bashTool = defineTool({
 
       return toolSuccess({ output: outputText, exitCode: result.exitCode });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error executing bash command";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unknown error executing bash command";
       return toolError(message);
     }
   },

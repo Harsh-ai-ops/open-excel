@@ -26,13 +26,37 @@ export const THINKING_LEVELS: { value: ThinkingLevel; label: string }[] = [
 ];
 
 export const API_TYPES = [
-  { id: "openai-completions", name: "OpenAI Completions", hint: "Most compatible — Ollama, vLLM, LMStudio, etc." },
-  { id: "openai-responses", name: "OpenAI Responses", hint: "Newer OpenAI API format" },
+  {
+    id: "openai-completions",
+    name: "OpenAI Completions",
+    hint: "Most compatible — Ollama, vLLM, LMStudio, etc.",
+  },
+  {
+    id: "openai-responses",
+    name: "OpenAI Responses",
+    hint: "Newer OpenAI API format",
+  },
   { id: "anthropic-messages", name: "Anthropic Messages", hint: "Claude API" },
-  { id: "google-generative-ai", name: "Google Generative AI", hint: "Gemini API" },
-  { id: "azure-openai-responses", name: "Azure OpenAI Responses", hint: "Azure-hosted OpenAI" },
-  { id: "openai-codex-responses", name: "OpenAI Codex Responses", hint: "ChatGPT subscription models" },
-  { id: "google-gemini-cli", name: "Google Gemini CLI", hint: "Cloud Code Assist" },
+  {
+    id: "google-generative-ai",
+    name: "Google Generative AI",
+    hint: "Gemini API",
+  },
+  {
+    id: "azure-openai-responses",
+    name: "Azure OpenAI Responses",
+    hint: "Azure-hosted OpenAI",
+  },
+  {
+    id: "openai-codex-responses",
+    name: "OpenAI Codex Responses",
+    hint: "ChatGPT subscription models",
+  },
+  {
+    id: "google-gemini-cli",
+    name: "Google Gemini CLI",
+    hint: "Cloud Code Assist",
+  },
   { id: "google-vertex", name: "Google Vertex AI", hint: "Vertex AI endpoint" },
 ];
 
@@ -76,7 +100,10 @@ export function buildCustomModel(config: ProviderConfig): Model<any> | null {
   };
 }
 
-export function applyProxyToModel(model: Model<any>, config: ProviderConfig): Model<any> {
+export function applyProxyToModel(
+  model: Model<any>,
+  config: ProviderConfig,
+): Model<any> {
   if (!config.useProxy || !config.proxyUrl || !model.baseUrl) return model;
   return {
     ...model,

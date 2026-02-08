@@ -17,7 +17,9 @@ let bash: Bash | null = null;
 // Skill files are mounted on every VFS creation (global, not per-session)
 let skillFilesCache: Record<string, Uint8Array | string> = {};
 
-export function setSkillFiles(files: Record<string, Uint8Array | string>): void {
+export function setSkillFiles(
+  files: Record<string, Uint8Array | string>,
+): void {
   skillFilesCache = files;
 }
 
@@ -60,7 +62,9 @@ export function resetVfs(): void {
  * Snapshot all files in the VFS as path→Uint8Array pairs.
  * Only captures files (not directories or symlinks).
  */
-export async function snapshotVfs(): Promise<{ path: string; data: Uint8Array }[]> {
+export async function snapshotVfs(): Promise<
+  { path: string; data: Uint8Array }[]
+> {
   const vfs = getVfs();
   const allPaths = vfs.getAllPaths();
   const files: { path: string; data: Uint8Array }[] = [];
@@ -85,7 +89,9 @@ export async function snapshotVfs(): Promise<{ path: string; data: Uint8Array }[
 /**
  * Restore VFS from a snapshot. Resets existing state and writes all files.
  */
-export async function restoreVfs(files: { path: string; data: Uint8Array }[]): Promise<void> {
+export async function restoreVfs(
+  files: { path: string; data: Uint8Array }[],
+): Promise<void> {
   resetVfs();
 
   if (files.length === 0) {
@@ -110,7 +116,10 @@ export async function restoreVfs(files: { path: string; data: Uint8Array }[]): P
 /**
  * Write a file to the VFS
  */
-export async function writeFile(path: string, content: string | Uint8Array): Promise<void> {
+export async function writeFile(
+  path: string,
+  content: string | Uint8Array,
+): Promise<void> {
   const vfs = getVfs();
   const fullPath = path.startsWith("/") ? path : `/home/user/uploads/${path}`;
 
@@ -179,7 +188,10 @@ export async function listUploads(): Promise<string[]> {
 /**
  * Get file info (for determining if it's an image, etc.)
  */
-export function getFileType(filename: string): { isImage: boolean; mimeType: string } {
+export function getFileType(filename: string): {
+  isImage: boolean;
+  mimeType: string;
+} {
   const ext = filename.toLowerCase().split(".").pop() || "";
   const imageExts: Record<string, string> = {
     png: "image/png",
@@ -209,7 +221,10 @@ export function getFileType(filename: string): { isImage: boolean; mimeType: str
     pdf: "application/pdf",
   };
 
-  return { isImage: false, mimeType: mimeTypes[ext] || "application/octet-stream" };
+  return {
+    isImage: false,
+    mimeType: mimeTypes[ext] || "application/octet-stream",
+  };
 }
 
 /**

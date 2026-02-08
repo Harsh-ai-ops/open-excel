@@ -1,4 +1,10 @@
-import { deleteSkillFiles, listSkillNames, loadAllSkillFiles, loadSkillFiles, saveSkillFiles } from "../storage";
+import {
+  deleteSkillFiles,
+  listSkillNames,
+  loadAllSkillFiles,
+  loadSkillFiles,
+  saveSkillFiles,
+} from "../storage";
 import { setSkillFiles } from "../vfs";
 
 const encoder = new TextEncoder();
@@ -39,7 +45,9 @@ function findSkillMd(files: SkillInput[]): SkillInput | undefined {
   });
 }
 
-function normalizeFiles(files: SkillInput[]): { path: string; data: Uint8Array }[] {
+function normalizeFiles(
+  files: SkillInput[],
+): { path: string; data: Uint8Array }[] {
   return files.map((f) => ({
     path: f.path.replace(/^\.\//, ""),
     data: toUint8Array(f.data),
@@ -52,10 +60,15 @@ export async function addSkill(files: SkillInput[]): Promise<SkillMeta> {
     throw new Error("Skill must contain a SKILL.md file");
   }
 
-  const content = typeof skillMd.data === "string" ? skillMd.data : decoder.decode(skillMd.data);
+  const content =
+    typeof skillMd.data === "string"
+      ? skillMd.data
+      : decoder.decode(skillMd.data);
   const meta = parseSkillMeta(content);
   if (!meta) {
-    throw new Error("SKILL.md must have valid frontmatter with name and description");
+    throw new Error(
+      "SKILL.md must have valid frontmatter with name and description",
+    );
   }
 
   await saveSkillFiles(meta.name, normalizeFiles(files));

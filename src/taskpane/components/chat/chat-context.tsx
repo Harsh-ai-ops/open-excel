@@ -1,4 +1,8 @@
-import { Agent, type AgentEvent, type ThinkingLevel as AgentThinkingLevel } from "@mariozechner/pi-agent-core";
+import {
+  Agent,
+  type AgentEvent,
+  type ThinkingLevel as AgentThinkingLevel,
+} from "@mariozechner/pi-agent-core";
 import {
   type AssistantMessage,
   getModel,
@@ -8,7 +12,14 @@ import {
   streamSimple,
 } from "@mariozechner/pi-ai";
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { DirtyRange } from "../../../lib/dirty-tracker";
 import { getWorkbookMetadata, navigateTo } from "../../../lib/excel/api";
 import {
@@ -19,7 +30,11 @@ import {
   generateId,
   type SessionStats,
 } from "../../../lib/message-utils";
-import { loadOAuthCredentials, refreshOAuthToken, saveOAuthCredentials } from "../../../lib/oauth";
+import {
+  loadOAuthCredentials,
+  refreshOAuthToken,
+  saveOAuthCredentials,
+} from "../../../lib/oauth";
 import {
   applyProxyToModel,
   buildCustomModel,
@@ -49,9 +64,21 @@ import {
   saveVfsFiles,
 } from "../../../lib/storage";
 import { EXCEL_TOOLS } from "../../../lib/tools";
-import { deleteFile, listUploads, resetVfs, restoreVfs, snapshotVfs, writeFile } from "../../../lib/vfs";
+import {
+  deleteFile,
+  listUploads,
+  resetVfs,
+  restoreVfs,
+  snapshotVfs,
+  writeFile,
+} from "../../../lib/vfs";
 
-export type { ChatMessage, MessagePart, SessionStats, ToolCallStatus } from "../../../lib/message-utils";
+export type {
+  ChatMessage,
+  MessagePart,
+  SessionStats,
+  ToolCallStatus,
+} from "../../../lib/message-utils";
 export type { ProviderConfig, ThinkingLevel };
 
 function parseDirtyRanges(result: string | undefined): DirtyRange[] | null {
@@ -174,7 +201,8 @@ function thinkingLevelToAgent(level: ThinkingLevel): AgentThinkingLevel {
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ChatState>(() => {
     const saved = loadSavedConfig();
-    const validConfig = saved?.provider && saved?.apiKey && saved?.model ? saved : null;
+    const validConfig =
+      saved?.provider && saved?.apiKey && saved?.model ? saved : null;
     return {
       messages: [],
       isStreaming: false,
@@ -232,12 +260,20 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         break;
       }
       case "message_update": {
-        if (event.message.role === "assistant" && streamingMessageIdRef.current) {
+        if (
+          event.message.role === "assistant" &&
+          streamingMessageIdRef.current
+        ) {
           setState((prev) => {
             const messages = [...prev.messages];
-            const idx = messages.findIndex((m) => m.id === streamingMessageIdRef.current);
+            const idx = messages.findIndex(
+              (m) => m.id === streamingMessageIdRef.current,
+            );
             if (idx !== -1) {
-              const parts = extractPartsFromAssistantMessage(event.message, messages[idx].parts);
+              const parts = extractPartsFromAssistantMessage(
+                event.message,
+                messages[idx].parts,
+              );
               messages[idx] = { ...messages[idx], parts };
             }
             return { ...prev, messages };
@@ -248,28 +284,42 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       case "message_end": {
         if (event.message.role === "assistant") {
           const assistantMsg = event.message as AssistantMessage;
-          const isError = assistantMsg.stopReason === "error" || assistantMsg.stopReason === "aborted";
+          const isError =
+            assistantMsg.stopReason === "error" ||
+            assistantMsg.stopReason === "aborted";
           console.log("[Chat] Assistant message result:", event.message);
           console.log("[Chat] Usage:", assistantMsg.usage);
-          console.log("[Chat] stopReason:", assistantMsg.stopReason, "errorMessage:", assistantMsg.errorMessage);
+          console.log(
+            "[Chat] stopReason:",
+            assistantMsg.stopReason,
+            "errorMessage:",
+            assistantMsg.errorMessage,
+          );
 
           setState((prev) => {
             const messages = [...prev.messages];
-            const idx = messages.findIndex((m) => m.id === streamingMessageIdRef.current);
+            const idx = messages.findIndex(
+              (m) => m.id === streamingMessageIdRef.current,
+            );
 
             if (isError) {
               if (idx !== -1) {
                 messages.splice(idx, 1);
               }
             } else if (idx !== -1) {
-              const parts = extractPartsFromAssistantMessage(event.message, messages[idx].parts);
+              const parts = extractPartsFromAssistantMessage(
+                event.message,
+                messages[idx].parts,
+              );
               messages[idx] = { ...messages[idx], parts };
             }
 
             return {
               ...prev,
               messages,
-              error: isError ? assistantMsg.errorMessage || "Request failed" : prev.error,
+              error: isError
+                ? assistantMsg.errorMessage || "Request failed"
+                : prev.error,
               sessionStats: isError
                 ? prev.sessionStats
                 : {
@@ -287,7 +337,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           const messages = [...prev.messages];
           for (let i = messages.length - 1; i >= 0; i--) {
             const msg = messages[i];
-            const partIdx = msg.parts.findIndex((p) => p.type === "toolCall" && p.id === event.toolCallId);
+            const partIdx = msg.parts.findIndex(
+              (p) => p.type === "toolCall" && p.id === event.toolCallId,
+            );
             if (partIdx !== -1) {
               const parts = [...msg.parts];
               const part = parts[partIdx];
@@ -307,7 +359,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           const messages = [...prev.messages];
           for (let i = messages.length - 1; i >= 0; i--) {
             const msg = messages[i];
-            const partIdx = msg.parts.findIndex((p) => p.type === "toolCall" && p.id === event.toolCallId);
+            const partIdx = msg.parts.findIndex(
+              (p) => p.type === "toolCall" && p.id === event.toolCallId,
+            );
             if (partIdx !== -1) {
               const parts = [...msg.parts];
               const part = parts[partIdx];
@@ -315,7 +369,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                 let partialText: string;
                 if (typeof event.partialResult === "string") {
                   partialText = event.partialResult;
-                } else if (event.partialResult?.content && Array.isArray(event.partialResult.content)) {
+                } else if (
+                  event.partialResult?.content &&
+                  Array.isArray(event.partialResult.content)
+                ) {
                   partialText = event.partialResult.content
                     .filter((c: { type: string }) => c.type === "text")
                     .map((c: { text: string }) => c.text)
@@ -337,7 +394,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         let resultText: string;
         if (typeof event.result === "string") {
           resultText = event.result;
-        } else if (event.result?.content && Array.isArray(event.result.content)) {
+        } else if (
+          event.result?.content &&
+          Array.isArray(event.result.content)
+        ) {
           resultText = event.result.content
             .filter((c: { type: string }) => c.type === "text")
             .map((c: { text: string }) => c.text)
@@ -367,12 +427,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           const messages = [...prev.messages];
           for (let i = messages.length - 1; i >= 0; i--) {
             const msg = messages[i];
-            const partIdx = msg.parts.findIndex((p) => p.type === "toolCall" && p.id === event.toolCallId);
+            const partIdx = msg.parts.findIndex(
+              (p) => p.type === "toolCall" && p.id === event.toolCallId,
+            );
             if (partIdx !== -1) {
               const parts = [...msg.parts];
               const part = parts[partIdx];
               if (part.type === "toolCall") {
-                parts[partIdx] = { ...part, status: event.isError ? "error" : "complete", result: resultText };
+                parts[partIdx] = {
+                  ...part,
+                  status: event.isError ? "error" : "complete",
+                  result: resultText,
+                };
                 messages[i] = { ...msg, parts };
               }
               break;
@@ -393,21 +459,29 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const configRef = useRef<ProviderConfig | null>(null);
 
-  const getActiveApiKey = useCallback(async (config: ProviderConfig): Promise<string> => {
-    if (config.authMethod !== "oauth") {
-      return config.apiKey;
-    }
-    const creds = loadOAuthCredentials(config.provider);
-    if (!creds) return config.apiKey;
-    if (Date.now() < creds.expires) {
-      return creds.access;
-    }
-    console.log("[Chat] Refreshing OAuth token before API call...");
-    const refreshed = await refreshOAuthToken(config.provider, creds.refresh, config.proxyUrl, config.useProxy);
-    saveOAuthCredentials(config.provider, refreshed);
-    console.log("[Chat] OAuth token refreshed");
-    return refreshed.access;
-  }, []);
+  const getActiveApiKey = useCallback(
+    async (config: ProviderConfig): Promise<string> => {
+      if (config.authMethod !== "oauth") {
+        return config.apiKey;
+      }
+      const creds = loadOAuthCredentials(config.provider);
+      if (!creds) return config.apiKey;
+      if (Date.now() < creds.expires) {
+        return creds.access;
+      }
+      console.log("[Chat] Refreshing OAuth token before API call...");
+      const refreshed = await refreshOAuthToken(
+        config.provider,
+        creds.refresh,
+        config.proxyUrl,
+        config.useProxy,
+      );
+      saveOAuthCredentials(config.provider, refreshed);
+      console.log("[Chat] OAuth token refreshed");
+      return refreshed.access;
+    },
+    [],
+  );
 
   const applyConfig = useCallback(
     (config: ProviderConfig) => {
@@ -507,7 +581,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }
       const agent = agentRef.current;
       if (!agent || !state.providerConfig) {
-        setState((prev) => ({ ...prev, error: "Please configure your API key first" }));
+        setState((prev) => ({
+          ...prev,
+          error: "Please configure your API key first",
+        }));
         return;
       }
 
@@ -547,7 +624,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
         // Add attachments section if files are uploaded
         if (attachments && attachments.length > 0) {
-          const paths = attachments.map((name) => `/home/user/uploads/${name}`).join("\n");
+          const paths = attachments
+            .map((name) => `/home/user/uploads/${name}`)
+            .join("\n");
           promptContent = `<attachments>\n${paths}\n</attachments>\n\n${promptContent}`;
         }
 
@@ -571,11 +650,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     agentRef.current?.reset();
     resetVfs();
     if (currentSessionIdRef.current) {
-      Promise.all([saveSession(currentSessionIdRef.current, []), saveVfsFiles(currentSessionIdRef.current, [])]).catch(
-        console.error,
-      );
+      Promise.all([
+        saveSession(currentSessionIdRef.current, []),
+        saveVfsFiles(currentSessionIdRef.current, []),
+      ]).catch(console.error);
     }
-    setState((prev) => ({ ...prev, messages: [], error: null, sessionStats: INITIAL_STATS, uploads: [] }));
+    setState((prev) => ({
+      ...prev,
+      messages: [],
+      error: null,
+      sessionStats: INITIAL_STATS,
+      uploads: [],
+    }));
   }, [abort]);
 
   const refreshSessions = useCallback(async () => {
@@ -583,7 +669,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const sessions = await listSessions(workbookIdRef.current);
     console.log(
       "[Chat] refreshSessions:",
-      sessions.map((s) => ({ id: s.id, name: s.name, msgs: (s.agentMessages ?? []).length })),
+      sessions.map((s) => ({
+        id: s.id,
+        name: s.name,
+        msgs: (s.agentMessages ?? []).length,
+      })),
     );
     setState((prev) => ({ ...prev, sessions }));
   }, []);
@@ -619,7 +709,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [refreshSessions]);
 
   const switchSession = useCallback(async (sessionId: string) => {
-    console.log("[Chat] switchSession called:", sessionId, "current:", currentSessionIdRef.current);
+    console.log(
+      "[Chat] switchSession called:",
+      sessionId,
+      "current:",
+      currentSessionIdRef.current,
+    );
     if (currentSessionIdRef.current === sessionId) return;
     if (isStreamingRef.current) {
       console.log("[Chat] switchSession blocked: streaming in progress");
@@ -627,7 +722,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
     agentRef.current?.reset();
     try {
-      const [session, vfsFiles] = await Promise.all([getSession(sessionId), loadVfsFiles(sessionId)]);
+      const [session, vfsFiles] = await Promise.all([
+        getSession(sessionId),
+        loadVfsFiles(sessionId),
+      ]);
       console.log(
         "[Chat] switchSession loaded:",
         session?.id,
@@ -654,7 +752,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         messages: agentMessagesToChatMessages(session.agentMessages),
         currentSession: session,
         error: null,
-        sessionStats: { ...stats, contextWindow: prev.sessionStats.contextWindow },
+        sessionStats: {
+          ...stats,
+          contextWindow: prev.sessionStats.contextWindow,
+        },
         uploads: uploadNames.map((name) => ({ name, size: 0 })),
       }));
     } catch (err) {
@@ -688,21 +789,31 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       messages: agentMessagesToChatMessages(session.agentMessages),
       currentSession: session,
       error: null,
-      sessionStats: { ...stats, contextWindow: prev.sessionStats.contextWindow },
+      sessionStats: {
+        ...stats,
+        contextWindow: prev.sessionStats.contextWindow,
+      },
       uploads: uploadNames.map((name) => ({ name, size: 0 })),
     }));
   }, [refreshSessions]);
 
   const prevStreamingRef = useRef(false);
   useEffect(() => {
-    if (prevStreamingRef.current && !state.isStreaming && currentSessionIdRef.current) {
+    if (
+      prevStreamingRef.current &&
+      !state.isStreaming &&
+      currentSessionIdRef.current
+    ) {
       const sessionId = currentSessionIdRef.current;
       const agentMessages = agentRef.current?.state.messages ?? [];
       // Snapshot VFS first (returns native Promise), then save to IndexedDB.
       (async () => {
         try {
           const vfsFiles = await snapshotVfs();
-          await Promise.all([saveSession(sessionId, agentMessages), saveVfsFiles(sessionId, vfsFiles)]);
+          await Promise.all([
+            saveSession(sessionId, agentMessages),
+            saveVfsFiles(sessionId, vfsFiles),
+          ]);
           await refreshSessions();
           const updated = await getSession(sessionId);
           if (updated) {
@@ -750,14 +861,21 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
         const session = await getOrCreateCurrentSession(id);
         currentSessionIdRef.current = session.id;
-        const [sessions, vfsFiles] = await Promise.all([listSessions(id), loadVfsFiles(session.id)]);
+        const [sessions, vfsFiles] = await Promise.all([
+          listSessions(id),
+          loadVfsFiles(session.id),
+        ]);
         if (vfsFiles.length > 0) {
           await restoreVfs(vfsFiles);
         }
 
         if (session.agentMessages.length > 0 && agentRef.current) {
           agentRef.current.replaceMessages(session.agentMessages);
-          console.log("[Chat] Restored", session.agentMessages.length, "agent messages from DB");
+          console.log(
+            "[Chat] Restored",
+            session.agentMessages.length,
+            "agent messages from DB",
+          );
         }
 
         const uploadNames = await listUploads();
@@ -776,7 +894,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           currentSession: session,
           sessions,
           skills,
-          sessionStats: { ...stats, contextWindow: prev.sessionStats.contextWindow },
+          sessionStats: {
+            ...stats,
+            contextWindow: prev.sessionStats.contextWindow,
+          },
           uploads: uploadNames.map((name) => ({ name, size: 0 })),
         }));
       })
@@ -803,10 +924,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           if (exists) {
             return {
               ...prev,
-              uploads: prev.uploads.map((u) => (u.name === file.name ? { name: file.name, size: file.size } : u)),
+              uploads: prev.uploads.map((u) =>
+                u.name === file.name ? { name: file.name, size: file.size } : u,
+              ),
             };
           }
-          return { ...prev, uploads: [...prev.uploads, { name: file.name, size: file.size }] };
+          return {
+            ...prev,
+            uploads: [...prev.uploads, { name: file.name, size: file.size }],
+          };
         });
       }
       if (currentSessionIdRef.current) {
@@ -823,14 +949,20 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const removeUpload = useCallback(async (name: string) => {
     try {
       await deleteFile(name);
-      setState((prev) => ({ ...prev, uploads: prev.uploads.filter((u) => u.name !== name) }));
+      setState((prev) => ({
+        ...prev,
+        uploads: prev.uploads.filter((u) => u.name !== name),
+      }));
       if (currentSessionIdRef.current) {
         const snapshot = await snapshotVfs();
         await saveVfsFiles(currentSessionIdRef.current, snapshot);
       }
     } catch (err) {
       console.error("Failed to delete file:", err);
-      setState((prev) => ({ ...prev, uploads: prev.uploads.filter((u) => u.name !== name) }));
+      setState((prev) => ({
+        ...prev,
+        uploads: prev.uploads.filter((u) => u.name !== name),
+      }));
     }
   }, []);
 

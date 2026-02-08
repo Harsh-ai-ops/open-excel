@@ -2,7 +2,10 @@ import { ensureLockdown } from "../taskpane/lockdown";
 
 /* global Compartment */
 
-export function sandboxedEval(code: string, globals: Record<string, unknown>): unknown {
+export function sandboxedEval(
+  code: string,
+  globals: Record<string, unknown>,
+): unknown {
   ensureLockdown();
   const compartment = new Compartment({
     globals: {

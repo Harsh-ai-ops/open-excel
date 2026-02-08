@@ -14,18 +14,28 @@ interface ToolConfig<T extends TObject> {
   label: string;
   description: string;
   parameters: T;
-  execute: (toolCallId: string, params: Static<T>, signal?: AbortSignal) => Promise<ToolResult>;
+  execute: (
+    toolCallId: string,
+    params: Static<T>,
+    signal?: AbortSignal,
+  ) => Promise<ToolResult>;
   dirtyTracking?: DirtyTrackingConfig<Static<T>>;
 }
 
-export function defineTool<T extends TObject>(config: ToolConfig<T>): AgentTool {
+export function defineTool<T extends TObject>(
+  config: ToolConfig<T>,
+): AgentTool {
   if (!config.dirtyTracking) {
     return config as unknown as AgentTool;
   }
 
   const { dirtyTracking, execute, ...rest } = config;
 
-  const wrappedExecute = async (toolCallId: string, params: Static<T>, signal?: AbortSignal): Promise<ToolResult> => {
+  const wrappedExecute = async (
+    toolCallId: string,
+    params: Static<T>,
+    signal?: AbortSignal,
+  ): Promise<ToolResult> => {
     const result = await execute(toolCallId, params, signal);
     const first = result.content[0];
     if (!first || first.type !== "text") return result;
@@ -53,7 +63,8 @@ export function defineTool<T extends TObject>(config: ToolConfig<T>): AgentTool 
 }
 
 export function toolSuccess(data: unknown): ToolResult {
-  const result = typeof data === "object" && data !== null ? { ...data } : { result: data };
+  const result =
+    typeof data === "object" && data !== null ? { ...data } : { result: data };
   return {
     content: [{ type: "text", text: JSON.stringify(result) }],
     details: undefined,
@@ -62,7 +73,12 @@ export function toolSuccess(data: unknown): ToolResult {
 
 export function toolError(message: string): ToolResult {
   return {
-    content: [{ type: "text", text: JSON.stringify({ success: false, error: message }) }],
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify({ success: false, error: message }),
+      },
+    ],
     details: undefined,
   };
 }

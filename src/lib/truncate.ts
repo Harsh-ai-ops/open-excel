@@ -26,7 +26,10 @@ function byteLength(str: string): number {
   return new TextEncoder().encode(str).byteLength;
 }
 
-export function truncateHead(content: string, options: TruncationOptions = {}): TruncationResult {
+export function truncateHead(
+  content: string,
+  options: TruncationOptions = {},
+): TruncationResult {
   const maxLines = options.maxLines ?? DEFAULT_MAX_LINES;
   const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
   const totalBytes = byteLength(content);
@@ -76,7 +79,10 @@ export function truncateHead(content: string, options: TruncationOptions = {}): 
   };
 }
 
-export function truncateTail(content: string, options: TruncationOptions = {}): TruncationResult {
+export function truncateTail(
+  content: string,
+  options: TruncationOptions = {},
+): TruncationResult {
   const maxLines = options.maxLines ?? DEFAULT_MAX_LINES;
   const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
   const totalBytes = byteLength(content);

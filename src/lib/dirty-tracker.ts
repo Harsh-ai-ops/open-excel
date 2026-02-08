@@ -23,7 +23,9 @@ export function mergeRanges(ranges: DirtyRange[]): DirtyRange[] {
 
     if (r.range === "*") {
       // Remove all other ranges for this sheet, replace with '*'
-      const keysToDelete = Array.from(seen.keys()).filter((key) => key.startsWith(`${sheetKey}:`));
+      const keysToDelete = Array.from(seen.keys()).filter((key) =>
+        key.startsWith(`${sheetKey}:`),
+      );
       for (const key of keysToDelete) {
         seen.delete(key);
       }

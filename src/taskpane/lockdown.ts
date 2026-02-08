@@ -50,20 +50,29 @@ function restoreFunctionProperties(saved: Map<string, unknown>) {
   // Slow path: Function is frozen by lockdown, wrap it in a Proxy
   const desc = Object.getOwnPropertyDescriptor(globalThis, "Function");
   if (!desc || (!desc.writable && !desc.configurable)) {
-    console.warn("[lockdown] Cannot restore Function properties — Function is neither writable nor configurable");
+    console.warn(
+      "[lockdown] Cannot restore Function properties — Function is neither writable nor configurable",
+    );
     return;
   }
 
   const proxy = new Proxy(fn, {
     get(target, prop, receiver) {
-      return saved.has(prop as string) ? saved.get(prop as string) : Reflect.get(target, prop, receiver);
+      return saved.has(prop as string)
+        ? saved.get(prop as string)
+        : Reflect.get(target, prop, receiver);
     },
     has(target, prop) {
       return saved.has(prop as string) ? true : Reflect.has(target, prop);
     },
     getOwnPropertyDescriptor(target, prop) {
       if (saved.has(prop as string)) {
-        return { value: saved.get(prop as string), writable: false, enumerable: false, configurable: true };
+        return {
+          value: saved.get(prop as string),
+          writable: false,
+          enumerable: false,
+          configurable: true,
+        };
       }
       return Reflect.getOwnPropertyDescriptor(target, prop);
     },
@@ -91,7 +100,10 @@ export function ensureLockdown() {
     locked = true;
     restoreFunctionProperties(savedFnProps);
   } catch (e) {
-    if (e instanceof TypeError && String(e).includes("SES_ALREADY_LOCKED_DOWN")) {
+    if (
+      e instanceof TypeError &&
+      String(e).includes("SES_ALREADY_LOCKED_DOWN")
+    ) {
       locked = true;
     } else {
       throw e;

@@ -46,23 +46,33 @@ function cellAddress(rowIndex: number, colIndex: number): string {
   return `${columnIndexToLetter(colIndex)}${rowIndex + 1}`;
 }
 
-function parseRangeAddress(address: string): { startCol: number; startRow: number } {
+function parseRangeAddress(address: string): {
+  startCol: number;
+  startRow: number;
+} {
   const clean = address.split("!").pop()?.split(":")[0] || "A1";
   const match = clean.match(/([A-Z]+)(\d+)/);
   if (!match) return { startCol: 0, startRow: 0 };
-  const col = match[1].split("").reduce((acc, c) => acc * 26 + c.charCodeAt(0) - 64, 0) - 1;
+  const col =
+    match[1].split("").reduce((acc, c) => acc * 26 + c.charCodeAt(0) - 64, 0) -
+    1;
   const row = Number.parseInt(match[2], 10) - 1;
   return { startCol: col, startRow: row };
 }
 
-function excelColorToHex(color: Excel.RangeFont | Excel.RangeFill): string | undefined {
+function excelColorToHex(
+  color: Excel.RangeFont | Excel.RangeFill,
+): string | undefined {
   const c = color as { color?: string };
   if (!c.color || c.color === "null") return undefined;
   if (c.color.startsWith("#")) return c.color.toUpperCase();
   return c.color;
 }
 
-async function getPointsPerStandardColumnWidth(context: Excel.RequestContext, sheet: Excel.Worksheet): Promise<number> {
+async function getPointsPerStandardColumnWidth(
+  context: Excel.RequestContext,
+  sheet: Excel.Worksheet,
+): Promise<number> {
   const probe = sheet.getRange("XFD:XFD");
   probe.format.load("columnWidth");
   sheet.load("standardWidth");
@@ -108,7 +118,10 @@ export async function getWorksheetById(
   return null;
 }
 
-export async function getWorksheetStableId(context: Excel.RequestContext, sheet: Excel.Worksheet): Promise<number> {
+export async function getWorksheetStableId(
+  context: Excel.RequestContext,
+  sheet: Excel.Worksheet,
+): Promise<number> {
   sheet.load("id");
   await context.sync();
   return getStableSheetId(sheet.id);
@@ -132,7 +145,9 @@ export async function getCellRanges(
     usedRange.load("address");
     await context.sync();
 
-    const dimension = usedRange.isNullObject ? "A1" : usedRange.address.split("!")[1] || "A1";
+    const dimension = usedRange.isNullObject
+      ? "A1"
+      : usedRange.address.split("!")[1] || "A1";
 
     const cells: Record<string, string | number | boolean | null> = {};
     const formulas: Record<string, string> = {};
@@ -153,7 +168,9 @@ export async function getCellRanges(
       const startAddress = range.address.split("!")[1]?.split(":")[0] || "A1";
       const startMatch = startAddress.match(/([A-Z]+)(\d+)/);
       const startCol = startMatch
-        ? startMatch[1].split("").reduce((acc, c) => acc * 26 + c.charCodeAt(0) - 64, 0) - 1
+        ? startMatch[1]
+            .split("")
+            .reduce((acc, c) => acc * 26 + c.charCodeAt(0) - 64, 0) - 1
         : 0;
       const startRow = startMatch ? Number.parseInt(startMatch[2], 10) - 1 : 0;
 
@@ -197,8 +214,10 @@ export async function getCellRanges(
 
           if (font.size) rangeStyle.sz = font.size;
           if (font.name) rangeStyle.family = font.name;
-          if (font.bold !== null && font.bold !== undefined) rangeStyle.bold = font.bold;
-          if (font.italic !== null && font.italic !== undefined) rangeStyle.italic = font.italic;
+          if (font.bold !== null && font.bold !== undefined)
+            rangeStyle.bold = font.bold;
+          if (font.italic !== null && font.italic !== undefined)
+            rangeStyle.italic = font.italic;
 
           const fontColor = excelColorToHex(font as Excel.RangeFont);
           if (fontColor) rangeStyle.color = fontColor;
@@ -343,21 +362,28 @@ export async function searchData(
 
     const matches: SearchMatch[] = [];
     const sheetsToSearch = sheetId
-      ? ([await getWorksheetById(context, sheetId)].filter(Boolean) as Excel.Worksheet[])
+      ? ([await getWorksheetById(context, sheetId)].filter(
+          Boolean,
+        ) as Excel.Worksheet[])
       : sheets.items;
 
-    const pattern = useRegex ? new RegExp(searchTerm, matchCase ? "" : "i") : null;
+    const pattern = useRegex
+      ? new RegExp(searchTerm, matchCase ? "" : "i")
+      : null;
 
     for (const sheet of sheetsToSearch) {
       sheet.load("name,id");
-      const searchRange = range ? sheet.getRange(range) : sheet.getUsedRangeOrNullObject();
+      const searchRange = range
+        ? sheet.getRange(range)
+        : sheet.getUsedRangeOrNullObject();
       searchRange.load("values,formulas,address,rowCount,columnCount");
       await context.sync();
 
       if (searchRange.isNullObject) continue;
 
       const { startCol, startRow } = parseRangeAddress(searchRange.address);
-      const stableSheetId = stableIdMap.get(sheet.id) || (await getStableSheetId(sheet.id));
+      const stableSheetId =
+        stableIdMap.get(sheet.id) || (await getStableSheetId(sheet.id));
 
       for (let r = 0; r < searchRange.rowCount; r++) {
         for (let c = 0; c < searchRange.columnCount; c++) {
@@ -365,15 +391,22 @@ export async function searchData(
 
           const value = searchRange.values[r][c];
           const formula = searchRange.formulas[r][c];
-          const searchTarget = matchFormulas && formula ? String(formula) : String(value ?? "");
+          const searchTarget =
+            matchFormulas && formula ? String(formula) : String(value ?? "");
 
           let isMatch = false;
           if (pattern) {
             isMatch = pattern.test(searchTarget);
           } else {
-            const compareVal = matchCase ? searchTarget : searchTarget.toLowerCase();
-            const compareTerm = matchCase ? searchTerm : searchTerm.toLowerCase();
-            isMatch = matchEntireCell ? compareVal === compareTerm : compareVal.includes(compareTerm);
+            const compareVal = matchCase
+              ? searchTarget
+              : searchTarget.toLowerCase();
+            const compareTerm = matchCase
+              ? searchTerm
+              : searchTerm.toLowerCase();
+            isMatch = matchEntireCell
+              ? compareVal === compareTerm
+              : compareVal.includes(compareTerm);
           }
 
           if (isMatch && matches.length >= offset) {
@@ -382,7 +415,10 @@ export async function searchData(
               sheetId: stableSheetId,
               a1: cellAddress(startRow + r, startCol + c),
               value: value as string | number | boolean,
-              formula: typeof formula === "string" && formula.startsWith("=") ? formula : null,
+              formula:
+                typeof formula === "string" && formula.startsWith("=")
+                  ? formula
+                  : null,
               row: startRow + r + 1,
               column: startCol + c + 1,
             });
@@ -419,7 +455,9 @@ export interface GetAllObjectsResult {
   objects: ExcelObject[];
 }
 
-export async function getAllObjects(options: { sheetId?: number; id?: string } = {}): Promise<GetAllObjectsResult> {
+export async function getAllObjects(
+  options: { sheetId?: number; id?: string } = {},
+): Promise<GetAllObjectsResult> {
   const { sheetId, id } = options;
 
   return Excel.run(async (context) => {
@@ -436,7 +474,9 @@ export async function getAllObjects(options: { sheetId?: number; id?: string } =
 
     const objects: ExcelObject[] = [];
     const sheetsToCheck = sheetId
-      ? ([await getWorksheetById(context, sheetId)].filter(Boolean) as Excel.Worksheet[])
+      ? ([await getWorksheetById(context, sheetId)].filter(
+          Boolean,
+        ) as Excel.Worksheet[])
       : sheets.items;
 
     for (const sheet of sheetsToCheck) {
@@ -447,7 +487,8 @@ export async function getAllObjects(options: { sheetId?: number; id?: string } =
       pivotTables.load("items");
       await context.sync();
 
-      const stableSheetId = stableIdMap.get(sheet.id) || (await getStableSheetId(sheet.id));
+      const stableSheetId =
+        stableIdMap.get(sheet.id) || (await getStableSheetId(sheet.id));
 
       for (const chart of charts.items) {
         chart.load("id,name");
@@ -540,8 +581,10 @@ export async function setCellRange(
         for (let c = 0; c < range.columnCount; c++) {
           const value = range.values[r][c];
           const formula = range.formulas[r][c];
-          const hasValue = value !== null && value !== "" && value !== undefined;
-          const hasFormula = typeof formula === "string" && formula.startsWith("=");
+          const hasValue =
+            value !== null && value !== "" && value !== undefined;
+          const hasFormula =
+            typeof formula === "string" && formula.startsWith("=");
 
           if (hasValue || hasFormula) {
             nonEmptyCells.push(cellAddress(startRow + r, startCol + c));
@@ -551,7 +594,9 @@ export async function setCellRange(
 
       if (nonEmptyCells.length > 0) {
         const cellList =
-          nonEmptyCells.length <= 10 ? nonEmptyCells.join(", ") : `${nonEmptyCells.slice(0, 10).join(", ")}...`;
+          nonEmptyCells.length <= 10
+            ? nonEmptyCells.join(", ")
+            : `${nonEmptyCells.slice(0, 10).join(", ")}...`;
         throw new Error(
           `Would overwrite ${nonEmptyCells.length} non-empty cell(s): ${cellList}. ` +
             `To proceed with overwriting existing data, retry with allow_overwrite set to true.`,
@@ -580,7 +625,9 @@ export async function setCellRange(
     }
 
     if (hasFormulas) {
-      range.formulas = formulas.map((row, r) => row.map((f, c) => f ?? values[r][c]));
+      range.formulas = formulas.map((row, r) =>
+        row.map((f, c) => f ?? values[r][c]),
+      );
     } else {
       range.values = values;
     }
@@ -598,7 +645,8 @@ export async function setCellRange(
           if (s.fontWeight === "normal") cellRange.format.font.bold = false;
           if (s.fontStyle === "italic") cellRange.format.font.italic = true;
           if (s.fontStyle === "normal") cellRange.format.font.italic = false;
-          if (s.fontLine === "underline") cellRange.format.font.underline = "Single";
+          if (s.fontLine === "underline")
+            cellRange.format.font.underline = "Single";
           if (s.fontLine === "line-through") {
             cellRange.format.font.strikethrough = true;
             cellRange.format.font.underline = "None";
@@ -610,9 +658,11 @@ export async function setCellRange(
           if (s.fontSize) cellRange.format.font.size = s.fontSize;
           if (s.fontFamily) cellRange.format.font.name = s.fontFamily;
           if (s.fontColor) cellRange.format.font.color = s.fontColor;
-          if (s.backgroundColor) cellRange.format.fill.color = s.backgroundColor;
+          if (s.backgroundColor)
+            cellRange.format.fill.color = s.backgroundColor;
           if (s.horizontalAlignment) {
-            cellRange.format.horizontalAlignment = s.horizontalAlignment as Excel.HorizontalAlignment;
+            cellRange.format.horizontalAlignment =
+              s.horizontalAlignment as Excel.HorizontalAlignment;
           }
           if (s.numberFormat) cellRange.numberFormat = [[s.numberFormat]];
         }
@@ -636,7 +686,8 @@ export async function setCellRange(
                 dotted: Excel.BorderLineStyle.dot,
                 double: Excel.BorderLineStyle.double,
               };
-              border.style = styleMap[side.style] ?? Excel.BorderLineStyle.continuous;
+              border.style =
+                styleMap[side.style] ?? Excel.BorderLineStyle.continuous;
             }
             if (side.weight) {
               const weightMap: Record<string, Excel.BorderWeight> = {
@@ -672,7 +723,10 @@ export async function setCellRange(
     if (resizeWidth) {
       const cols = range.getEntireColumn();
       if (resizeWidth.type === "standard") {
-        const pointsPerStandard = await getPointsPerStandardColumnWidth(context, sheet);
+        const pointsPerStandard = await getPointsPerStandardColumnWidth(
+          context,
+          sheet,
+        );
         cols.format.columnWidth = resizeWidth.value * pointsPerStandard;
       } else {
         cols.format.columnWidth = resizeWidth.value;
@@ -693,7 +747,8 @@ export async function setCellRange(
       for (let r = 0; r < range.values.length; r++) {
         for (let c = 0; c < range.values[r].length; c++) {
           if (formulas[r]?.[c]) {
-            formulaResults[cellAddress(startRow + r, startCol + c)] = range.values[r][c];
+            formulaResults[cellAddress(startRow + r, startCol + c)] =
+              range.values[r][c];
           }
         }
       }
@@ -747,7 +802,11 @@ export interface CopyToResult {
   destination: string;
 }
 
-export async function copyTo(sheetId: number, sourceRange: string, destinationRange: string): Promise<CopyToResult> {
+export async function copyTo(
+  sheetId: number,
+  sourceRange: string,
+  destinationRange: string,
+): Promise<CopyToResult> {
   return Excel.run(async (context) => {
     const sheet = await getWorksheetById(context, sheetId);
     if (!sheet) throw new Error(`Worksheet with ID ${sheetId} not found`);
@@ -757,7 +816,11 @@ export async function copyTo(sheetId: number, sourceRange: string, destinationRa
     dest.copyFrom(source, Excel.RangeCopyType.all);
     await context.sync();
 
-    return { success: true, source: sourceRange, destination: destinationRange };
+    return {
+      success: true,
+      source: sourceRange,
+      destination: destinationRange,
+    };
   });
 }
 
@@ -776,7 +839,13 @@ export async function modifySheetStructure(
     position?: "before" | "after";
   },
 ): Promise<ModifySheetStructureResult> {
-  const { operation, dimension, reference, count = 1, position = "before" } = params;
+  const {
+    operation,
+    dimension,
+    reference,
+    count = 1,
+    position = "before",
+  } = params;
 
   return Excel.run(async (context) => {
     const sheet = await getWorksheetById(context, sheetId);
@@ -807,7 +876,9 @@ export async function modifySheetStructure(
 
       switch (operation) {
         case "insert": {
-          const shiftDir = isRow ? Excel.InsertShiftDirection.down : Excel.InsertShiftDirection.right;
+          const shiftDir = isRow
+            ? Excel.InsertShiftDirection.down
+            : Excel.InsertShiftDirection.right;
           if (position === "after") {
             sheet.getRange(afterRangeRef).insert(shiftDir);
           } else {
@@ -816,7 +887,11 @@ export async function modifySheetStructure(
           break;
         }
         case "delete":
-          targetRange.delete(isRow ? Excel.DeleteShiftDirection.up : Excel.DeleteShiftDirection.left);
+          targetRange.delete(
+            isRow
+              ? Excel.DeleteShiftDirection.up
+              : Excel.DeleteShiftDirection.left,
+          );
           break;
         case "hide":
           if (isRow) {
@@ -875,7 +950,12 @@ export async function modifyWorkbookStructure(params: {
         newSheet.load("id,name");
         await context.sync();
         const newSheetIndex = await getWorksheetStableId(context, newSheet);
-        return { success: true, operation, sheetId: newSheetIndex, sheetName: newSheet.name };
+        return {
+          success: true,
+          operation,
+          sheetId: newSheetIndex,
+          sheetName: newSheet.name,
+        };
       }
       case "delete": {
         const sheet = await getWorksheetById(context, sheetId!);
@@ -899,7 +979,12 @@ export async function modifyWorkbookStructure(params: {
         copy.load("id,name");
         await context.sync();
         const copyIndex = await getWorksheetStableId(context, copy);
-        return { success: true, operation, sheetId: copyIndex, sheetName: copy.name };
+        return {
+          success: true,
+          operation,
+          sheetId: copyIndex,
+          sheetName: copy.name,
+        };
       }
     }
   });
@@ -928,7 +1013,10 @@ export async function resizeRange(
     if (width) {
       const cols = targetRange.getEntireColumn();
       if (width.type === "standard") {
-        const pointsPerStandard = await getPointsPerStandardColumnWidth(context, sheet);
+        const pointsPerStandard = await getPointsPerStandardColumnWidth(
+          context,
+          sheet,
+        );
         cols.format.columnWidth = width.value * pointsPerStandard;
       } else {
         cols.format.columnWidth = width.value;
@@ -956,7 +1044,10 @@ export interface NavigateResult {
   range?: string;
 }
 
-export async function navigateTo(sheetId: number, range?: string): Promise<NavigateResult> {
+export async function navigateTo(
+  sheetId: number,
+  range?: string,
+): Promise<NavigateResult> {
   return Excel.run(async (context) => {
     const sheet = await getWorksheetById(context, sheetId);
     if (!sheet) throw new Error(`Worksheet with ID ${sheetId} not found`);
@@ -1038,11 +1129,15 @@ export async function getWorkbookMetadata(): Promise<WorkbookMetadata> {
         maxRows: usedRange.isNullObject ? 0 : usedRange.rowCount,
         maxColumns: usedRange.isNullObject ? 0 : usedRange.columnCount,
         frozenRows: freezeLocation.isNullObject ? 0 : freezeLocation.rowCount,
-        frozenColumns: freezeLocation.isNullObject ? 0 : freezeLocation.columnCount,
+        frozenColumns: freezeLocation.isNullObject
+          ? 0
+          : freezeLocation.columnCount,
       })),
     );
 
-    const activeSheetStableId = stableIdMap.get(activeSheet.id) || (await getStableSheetId(activeSheet.id));
+    const activeSheetStableId =
+      stableIdMap.get(activeSheet.id) ||
+      (await getStableSheetId(activeSheet.id));
 
     const rangeAddress = selectedRange.address.includes("!")
       ? selectedRange.address.split("!")[1]
@@ -1050,8 +1145,14 @@ export async function getWorkbookMetadata(): Promise<WorkbookMetadata> {
 
     console.log("[getWorkbookMetadata] activeSheet.id:", activeSheet.id);
     console.log("[getWorkbookMetadata] activeSheet.name:", activeSheet.name);
-    console.log("[getWorkbookMetadata] activeSheet.stableId:", activeSheetStableId);
-    console.log("[getWorkbookMetadata] selectedRange.address:", selectedRange.address);
+    console.log(
+      "[getWorkbookMetadata] activeSheet.stableId:",
+      activeSheetStableId,
+    );
+    console.log(
+      "[getWorkbookMetadata] selectedRange.address:",
+      selectedRange.address,
+    );
     console.log("[getWorkbookMetadata] parsed rangeAddress:", rangeAddress);
 
     return {
@@ -1077,7 +1178,10 @@ async function clearRowColumnAxis(
   }
 }
 
-async function clearDataAxis(context: Excel.RequestContext, axis: Excel.DataPivotHierarchyCollection): Promise<void> {
+async function clearDataAxis(
+  context: Excel.RequestContext,
+  axis: Excel.DataPivotHierarchyCollection,
+): Promise<void> {
   axis.load("items");
   await context.sync();
   for (const item of axis.items) {
@@ -1134,7 +1238,8 @@ async function applyPivotFields(
       const hierarchy = pivot.hierarchies.getItem(value.field);
       const dataHierarchy = pivot.dataHierarchies.add(hierarchy);
       if (value.summarizeBy) {
-        dataHierarchy.summarizeBy = summarizeMap[value.summarizeBy] ?? Excel.AggregationFunction.sum;
+        dataHierarchy.summarizeBy =
+          summarizeMap[value.summarizeBy] ?? Excel.AggregationFunction.sum;
       }
     }
   }
@@ -1172,7 +1277,11 @@ export async function modifyObject(params: {
             throw new Error("Chart creation requires source and chartType");
           }
           const sourceRange = sheet.getRange(properties.source);
-          const chart = charts.add(properties.chartType as Excel.ChartType, sourceRange, Excel.ChartSeriesBy.auto);
+          const chart = charts.add(
+            properties.chartType as Excel.ChartType,
+            sourceRange,
+            Excel.ChartSeriesBy.auto,
+          );
           if (properties.title) chart.title.text = properties.title;
           if (properties.anchor) {
             const anchorCell = sheet.getRange(properties.anchor);
@@ -1218,7 +1327,11 @@ export async function modifyObject(params: {
           }
           const sourceRange = sheet.getRange(properties.source);
           const destRange = sheet.getRange(properties.range);
-          const pivot = sheet.pivotTables.add(properties.name || "PivotTable", sourceRange, destRange);
+          const pivot = sheet.pivotTables.add(
+            properties.name || "PivotTable",
+            sourceRange,
+            destRange,
+          );
           if (properties?.rows || properties?.columns || properties?.values) {
             await applyPivotFields(context, pivot, properties);
           }

@@ -17,7 +17,12 @@ export const resizeRangeTool = defineTool({
     "Use 'A:D' for columns A-D, '1:5' for rows 1-5, or omit range for entire sheet.",
   parameters: Type.Object({
     sheetId: Type.Number({ description: "The worksheet ID (1-based index)" }),
-    range: Type.Optional(Type.String({ description: "Column range (A:D) or row range (1:5). Omit for entire sheet" })),
+    range: Type.Optional(
+      Type.String({
+        description:
+          "Column range (A:D) or row range (1:5). Omit for entire sheet",
+      }),
+    ),
     width: SizeSchema,
     height: SizeSchema,
     explanation: Type.Optional(
@@ -39,7 +44,8 @@ export const resizeRangeTool = defineTool({
       });
       return toolSuccess(result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error resizing";
+      const message =
+        error instanceof Error ? error.message : "Unknown error resizing";
       return toolError(message);
     }
   },

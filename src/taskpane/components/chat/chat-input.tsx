@@ -1,5 +1,11 @@
 import { Paperclip, Send, Square, X } from "lucide-react";
-import { type ChangeEvent, type KeyboardEvent, useCallback, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type KeyboardEvent,
+  useCallback,
+  useRef,
+  useState,
+} from "react";
 import { useChat } from "./chat-context";
 
 function formatFileSize(bytes: number): string {
@@ -21,7 +27,10 @@ export function ChatInput() {
     if (!trimmed || state.isStreaming) return;
     const attachmentNames = uploads.map((u) => u.name);
     setInput("");
-    await sendMessage(trimmed, attachmentNames.length > 0 ? attachmentNames : undefined);
+    await sendMessage(
+      trimmed,
+      attachmentNames.length > 0 ? attachmentNames : undefined,
+    );
   }, [input, state.isStreaming, sendMessage, uploads]);
 
   const handleKeyDown = useCallback(
@@ -51,8 +60,15 @@ export function ChatInput() {
   }, []);
 
   return (
-    <div className="border-t border-(--chat-border) p-3 bg-(--chat-bg)" style={{ fontFamily: "var(--chat-font-mono)" }}>
-      {state.error && <div className="text-(--chat-error) text-xs mb-2 px-1">{state.error}</div>}
+    <div
+      className="border-t border-(--chat-border) p-3 bg-(--chat-bg)"
+      style={{ fontFamily: "var(--chat-font-mono)" }}
+    >
+      {state.error && (
+        <div className="text-(--chat-error) text-xs mb-2 px-1">
+          {state.error}
+        </div>
+      )}
 
       {/* Uploaded files chips */}
       {uploads.length > 0 && (
@@ -66,7 +82,11 @@ export function ChatInput() {
               <span className="max-w-[120px] truncate" title={file.name}>
                 {file.name}
               </span>
-              {file.size > 0 && <span className="text-(--chat-text-muted)">{formatFileSize(file.size)}</span>}
+              {file.size > 0 && (
+                <span className="text-(--chat-text-muted)">
+                  {formatFileSize(file.size)}
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => removeUpload(file.name)}
@@ -105,7 +125,11 @@ export function ChatInput() {
             disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-(--chat-bg-secondary)
             transition-colors
           `}
-          style={{ borderRadius: "var(--chat-radius)", minHeight: "32px", width: "32px" }}
+          style={{
+            borderRadius: "var(--chat-radius)",
+            minHeight: "32px",
+            width: "32px",
+          }}
           title="Upload files"
         >
           <Paperclip size={14} className={isUploading ? "animate-pulse" : ""} />
@@ -116,7 +140,11 @@ export function ChatInput() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={state.providerConfig ? "Type a message..." : "Configure API key in settings"}
+          placeholder={
+            state.providerConfig
+              ? "Type a message..."
+              : "Configure API key in settings"
+          }
           disabled={!state.providerConfig}
           rows={1}
           className={`
@@ -143,7 +171,11 @@ export function ChatInput() {
               hover:bg-(--chat-error) hover:text-(--chat-bg)
               transition-colors
             `}
-            style={{ borderRadius: "var(--chat-radius)", minHeight: "32px", width: "32px" }}
+            style={{
+              borderRadius: "var(--chat-radius)",
+              minHeight: "32px",
+              width: "32px",
+            }}
           >
             <Square size={14} />
           </button>
@@ -161,7 +193,11 @@ export function ChatInput() {
               disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-(--chat-bg-secondary)
               transition-colors
             `}
-            style={{ borderRadius: "var(--chat-radius)", minHeight: "32px", width: "32px" }}
+            style={{
+              borderRadius: "var(--chat-radius)",
+              minHeight: "32px",
+              width: "32px",
+            }}
           >
             <Send size={14} />
           </button>

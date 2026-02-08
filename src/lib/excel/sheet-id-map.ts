@@ -15,7 +15,8 @@ async function loadFromSettings(): Promise<void> {
   return new Promise((resolve) => {
     Office.context.document.settings.refreshAsync(() => {
       cachedMap = Office.context.document.settings.get(SETTINGS_KEY_MAP) || {};
-      cachedCounter = Office.context.document.settings.get(SETTINGS_KEY_COUNTER) || 0;
+      cachedCounter =
+        Office.context.document.settings.get(SETTINGS_KEY_COUNTER) || 0;
       resolve();
     });
   });
@@ -70,7 +71,9 @@ export async function clearSheetIds(): Promise<void> {
   await saveToSettings();
 }
 
-export async function preloadSheetIds(worksheets: Excel.Worksheet[]): Promise<Map<string, number>> {
+export async function preloadSheetIds(
+  worksheets: Excel.Worksheet[],
+): Promise<Map<string, number>> {
   if (cachedMap === null) {
     await loadFromSettings();
   }

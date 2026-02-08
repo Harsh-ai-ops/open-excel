@@ -29,7 +29,9 @@ interface PendingSheetRef {
 /**
  * Create a tracked version of the Excel context that monitors mutations.
  */
-export function createTrackedContext(context: Excel.RequestContext): TrackedContextResult {
+export function createTrackedContext(
+  context: Excel.RequestContext,
+): TrackedContextResult {
   const dirtyEntries: DirtyEntry[] = [];
   const pendingSheetRefs: PendingSheetRef[] = [];
 
@@ -75,7 +77,11 @@ export function createTrackedContext(context: Excel.RequestContext): TrackedCont
     return new Proxy(range, {
       set(target, prop, value) {
         // Track mutations to values, formulas, numberFormat
-        if (prop === "values" || prop === "formulas" || prop === "numberFormat") {
+        if (
+          prop === "values" ||
+          prop === "formulas" ||
+          prop === "numberFormat"
+        ) {
           markDirty(sheetIdRef, getAddress());
         }
         (target as any)[prop] = value;
@@ -85,7 +91,12 @@ export function createTrackedContext(context: Excel.RequestContext): TrackedCont
         const value = (target as any)[prop];
 
         // Wrap methods that return ranges (these create new ranges, address unknown)
-        if (prop === "getCell" || prop === "getColumn" || prop === "getRow" || prop === "getResizedRange") {
+        if (
+          prop === "getCell" ||
+          prop === "getColumn" ||
+          prop === "getRow" ||
+          prop === "getResizedRange"
+        ) {
           return (...args: any[]) => {
             const result = (value as AnyFunction).apply(target, args);
             return createTrackedRangeWithRef(result, sheetIdRef); // No known address
@@ -126,7 +137,12 @@ export function createTrackedContext(context: Excel.RequestContext): TrackedCont
 
         // Wrap format property for tracking style changes
         if (prop === "format") {
-          return createTrackedFormatWithRef(value, sheetIdRef, range, knownAddress);
+          return createTrackedFormatWithRef(
+            value,
+            sheetIdRef,
+            range,
+            knownAddress,
+          );
         }
 
         if (typeof value === "function") {
@@ -143,7 +159,8 @@ export function createTrackedContext(context: Excel.RequestContext): TrackedCont
     range: Excel.Range,
     knownAddress?: string,
   ): Excel.RangeFormat => {
-    const getAddress = (): string => (knownAddress ? knownAddress : getCleanAddr(range));
+    const getAddress = (): string =>
+      knownAddress ? knownAddress : getCleanAddr(range);
 
     return new Proxy(format, {
       set(target, prop, value) {
@@ -156,7 +173,12 @@ export function createTrackedContext(context: Excel.RequestContext): TrackedCont
 
         // Track nested format properties (font, fill, borders)
         if (prop === "font" || prop === "fill" || prop === "borders") {
-          return createTrackedFormatPartWithRef(value, sheetIdRef, range, knownAddress);
+          return createTrackedFormatPartWithRef(
+            value,
+            sheetIdRef,
+            range,
+            knownAddress,
+          );
         }
 
         if (typeof value === "function") {
@@ -173,7 +195,8 @@ export function createTrackedContext(context: Excel.RequestContext): TrackedCont
     range: Excel.Range,
     knownAddress?: string,
   ): any => {
-    const getAddress = (): string => (knownAddress ? knownAddress : getCleanAddr(range));
+    const getAddress = (): string =>
+      knownAddress ? knownAddress : getCleanAddr(range);
 
     return new Proxy(part, {
       set(target, prop, value) {
@@ -191,7 +214,10 @@ export function createTrackedContext(context: Excel.RequestContext): TrackedCont
     });
   };
 
-  const createTrackedWorksheetWithRef = (sheet: Excel.Worksheet, sheetIdRef: { id: number }): Excel.Worksheet => {
+  const createTrackedWorksheetWithRef = (
+    sheet: Excel.Worksheet,
+    sheetIdRef: { id: number },
+  ): Excel.Worksheet => {
     return new Proxy(sheet, {
       get(target, prop) {
         const value = (target as any)[prop];
@@ -264,7 +290,10 @@ export function createTrackedContext(context: Excel.RequestContext): TrackedCont
     });
   };
 
-  const createTrackedCollectionWithRef = (collection: any, sheetIdRef: { id: number }): any => {
+  const createTrackedCollectionWithRef = (
+    collection: any,
+    sheetIdRef: { id: number },
+  ): any => {
     return new Proxy(collection, {
       get(target, prop) {
         const value = target[prop];
@@ -284,8 +313,13 @@ export function createTrackedContext(context: Excel.RequestContext): TrackedCont
     });
   };
 
-  const createTrackedWorksheets = (worksheets: Excel.WorksheetCollection): Excel.WorksheetCollection => {
-    const worksheetProxies = new Map<Excel.Worksheet, { proxy: Excel.Worksheet; sheetIdRef: { id: number } }>();
+  const createTrackedWorksheets = (
+    worksheets: Excel.WorksheetCollection,
+  ): Excel.WorksheetCollection => {
+    const worksheetProxies = new Map<
+      Excel.Worksheet,
+      { proxy: Excel.Worksheet; sheetIdRef: { id: number } }
+    >();
 
     return new Proxy(worksheets, {
       get(target, prop) {
@@ -300,7 +334,10 @@ export function createTrackedContext(context: Excel.RequestContext): TrackedCont
           prop === "getLast"
         ) {
           return (...args: any[]) => {
-            const sheet = (value as AnyFunction).apply(target, args) as Excel.Worksheet;
+            const sheet = (value as AnyFunction).apply(
+              target,
+              args,
+            ) as Excel.Worksheet;
 
             // Return cached proxy or create new one
             if (!worksheetProxies.has(sheet)) {
@@ -322,7 +359,10 @@ export function createTrackedContext(context: Excel.RequestContext): TrackedCont
         // Track worksheet creation/deletion
         if (prop === "add") {
           return (...args: any[]) => {
-            const newSheet = (value as AnyFunction).apply(target, args) as Excel.Worksheet;
+            const newSheet = (value as AnyFunction).apply(
+              target,
+              args,
+            ) as Excel.Worksheet;
             // New sheet will get tracked when accessed
             return newSheet;
           };

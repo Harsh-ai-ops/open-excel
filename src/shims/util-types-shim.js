@@ -12,7 +12,10 @@ export function isDataView(value) {
 }
 
 export function isSharedArrayBuffer(value) {
-  return typeof SharedArrayBuffer !== "undefined" && value instanceof SharedArrayBuffer;
+  return (
+    typeof SharedArrayBuffer !== "undefined" &&
+    value instanceof SharedArrayBuffer
+  );
 }
 
 export function isDate(value) {

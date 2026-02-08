@@ -1,5 +1,10 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
-import type { AssistantMessage, TextContent, ToolResultMessage, UserMessage } from "@mariozechner/pi-ai";
+import type {
+  AssistantMessage,
+  TextContent,
+  ToolResultMessage,
+  UserMessage,
+} from "@mariozechner/pi-ai";
 
 export type ToolCallStatus = "pending" | "running" | "complete" | "error";
 
@@ -32,7 +37,9 @@ export interface SessionStats {
   lastInputTokens: number;
 }
 
-export function stripEnrichment(content: string | { type: string; text?: string }[]): string {
+export function stripEnrichment(
+  content: string | { type: string; text?: string }[],
+): string {
   let text: string;
   if (typeof content === "string") {
     text = content;
@@ -84,7 +91,9 @@ export function extractPartsFromAssistantMessage(
   });
 }
 
-export function agentMessagesToChatMessages(agentMessages: AgentMessage[]): ChatMessage[] {
+export function agentMessagesToChatMessages(
+  agentMessages: AgentMessage[],
+): ChatMessage[] {
   const result: ChatMessage[] = [];
   for (const msg of agentMessages) {
     if (msg.role === "user") {
@@ -108,7 +117,9 @@ export function agentMessagesToChatMessages(agentMessages: AgentMessage[]): Chat
       for (let i = result.length - 1; i >= 0; i--) {
         const chatMsg = result[i];
         if (chatMsg.role !== "assistant") continue;
-        const partIdx = chatMsg.parts.findIndex((p) => p.type === "toolCall" && p.id === toolResult.toolCallId);
+        const partIdx = chatMsg.parts.findIndex(
+          (p) => p.type === "toolCall" && p.id === toolResult.toolCallId,
+        );
         if (partIdx !== -1) {
           const part = chatMsg.parts[partIdx];
           if (part.type === "toolCall") {
@@ -130,7 +141,9 @@ export function agentMessagesToChatMessages(agentMessages: AgentMessage[]): Chat
   return result;
 }
 
-export function deriveStats(agentMessages: AgentMessage[]): Omit<SessionStats, "contextWindow"> {
+export function deriveStats(
+  agentMessages: AgentMessage[],
+): Omit<SessionStats, "contextWindow"> {
   let inputTokens = 0;
   let outputTokens = 0;
   let cacheRead = 0;
@@ -150,5 +163,12 @@ export function deriveStats(agentMessages: AgentMessage[]): Omit<SessionStats, "
       }
     }
   }
-  return { inputTokens, outputTokens, cacheRead, cacheWrite, totalCost, lastInputTokens };
+  return {
+    inputTokens,
+    outputTokens,
+    cacheRead,
+    cacheWrite,
+    totalCost,
+    lastInputTokens,
+  };
 }

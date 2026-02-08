@@ -12,7 +12,13 @@ export { readTool } from "./read-file";
 export { resizeRangeTool } from "./resize-range";
 export { searchDataTool } from "./search-data";
 export { setCellRangeTool } from "./set-cell-range";
-export { defineTool, type ToolResult, toolError, toolSuccess, toolText } from "./types";
+export {
+  defineTool,
+  type ToolResult,
+  toolError,
+  toolSuccess,
+  toolText,
+} from "./types";
 
 import { bashTool } from "./bash";
 import { clearCellRangeTool } from "./clear-cell-range";
