@@ -8,6 +8,7 @@ export {
   getOrCreateCurrentSession,
   getOrCreateWorkbookId,
   getSession,
+  getSessionMessageCount,
   listSessions,
   listSkillNames,
   loadAllSkillFiles,

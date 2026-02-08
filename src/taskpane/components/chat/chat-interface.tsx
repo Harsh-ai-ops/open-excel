@@ -12,6 +12,7 @@ import {
   Upload,
 } from "lucide-react";
 import { type DragEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { getSessionMessageCount } from "../../../lib/storage";
 import { ChatProvider, useChat } from "./chat-context";
 import { ChatInput } from "./chat-input";
 import { MessageList } from "./message-list";
@@ -56,9 +57,10 @@ function StatsBar() {
 
   if (!providerConfig) return null;
 
-  const totalTokens = sessionStats.inputTokens + sessionStats.outputTokens;
   const contextPct =
-    sessionStats.contextWindow > 0 ? ((totalTokens / sessionStats.contextWindow) * 100).toFixed(1) : "0";
+    sessionStats.contextWindow > 0 && sessionStats.lastInputTokens > 0
+      ? ((sessionStats.lastInputTokens / sessionStats.contextWindow) * 100).toFixed(1)
+      : "0";
 
   return (
     <div
@@ -203,7 +205,9 @@ function SessionDropdown({ onSelect }: { onSelect: () => void }) {
                     )}
                     <span className="truncate text-(--chat-text-primary)">{session.name}</span>
                   </div>
-                  <span className="text-[10px] text-(--chat-text-muted) shrink-0 ml-2">{session.messages.length}</span>
+                  <span className="text-[10px] text-(--chat-text-muted) shrink-0 ml-2">
+                    {getSessionMessageCount(session)}
+                  </span>
                 </button>
               );
             })}

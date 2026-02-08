@@ -5,7 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
 import { type DirtyRange, mergeRanges } from "../../../lib/dirty-tracker";
 import { navigateTo } from "../../../lib/excel/api";
-import { type ChatMessage, type MessagePart, useChat } from "./chat-context";
+import type { ChatMessage, MessagePart } from "../../../lib/message-utils";
+import { useChat } from "./chat-context";
 
 function ThinkingBlock({ thinking, isStreaming }: { thinking: string; isStreaming?: boolean }) {
   const [isExpanded, setIsExpanded] = useState(false);

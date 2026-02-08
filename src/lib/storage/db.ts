@@ -1,11 +1,13 @@
+import type { AgentMessage } from "@mariozechner/pi-agent-core";
+import type { UserMessage } from "@mariozechner/pi-ai";
 import Dexie, { type Table } from "dexie";
-import type { ChatMessage } from "../../taskpane/components/chat/chat-context";
+import { stripEnrichment } from "../message-utils";
 
 export interface ChatSession {
   id: string;
   workbookId: string;
   name: string;
-  messages: ChatMessage[];
+  agentMessages: AgentMessage[];
   createdAt: number;
   updatedAt: number;
 }
@@ -50,6 +52,24 @@ const db = new OpenExcelDB();
 
 export { db };
 
+function extractUserText(msg: AgentMessage): string | null {
+  if (msg.role !== "user") return null;
+  const text = stripEnrichment((msg as UserMessage).content).trim();
+  return text || null;
+}
+
+function deriveSessionName(agentMessages: AgentMessage[]): string | null {
+  const firstUser = agentMessages.find((m) => m.role === "user");
+  if (!firstUser) return null;
+  const text = extractUserText(firstUser);
+  if (!text) return null;
+  return text.length > 40 ? `${text.slice(0, 37)}...` : text;
+}
+
+export function getSessionMessageCount(session: ChatSession): number {
+  return (session.agentMessages ?? []).filter((m) => m.role === "user" || m.role === "assistant").length;
+}
+
 export async function getOrCreateWorkbookId(): Promise<string> {
   return new Promise((resolve, reject) => {
     const settings = Office.context.document.settings;
@@ -73,7 +93,12 @@ export async function getOrCreateWorkbookId(): Promise<string> {
 }
 
 export async function listSessions(workbookId: string): Promise<ChatSession[]> {
-  return db.sessions.where("workbookId").equals(workbookId).reverse().sortBy("updatedAt");
+  const sessions = await db.sessions.where("workbookId").equals(workbookId).reverse().sortBy("updatedAt");
+  // breaking: old sessions will be blanked out
+  for (const s of sessions) {
+    if (!s.agentMessages) s.agentMessages = [];
+  }
+  return sessions;
 }
 
 export async function createSession(workbookId: string, name?: string): Promise<ChatSession> {
@@ -82,7 +107,7 @@ export async function createSession(workbookId: string, name?: string): Promise<
     id: crypto.randomUUID(),
     workbookId,
     name: name ?? "New Chat",
-    messages: [],
+    agentMessages: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -91,20 +116,16 @@ export async function createSession(workbookId: string, name?: string): Promise<
 }
 
 export async function getSession(sessionId: string): Promise<ChatSession | undefined> {
-  return db.sessions.get(sessionId);
+  const session = await db.sessions.get(sessionId);
+  if (session && !session.agentMessages) {
+    // breaking: old sessions will be blanked out
+    session.agentMessages = [];
+  }
+  return session;
 }
 
-function deriveSessionName(messages: ChatMessage[]): string | null {
-  const firstUserMsg = messages.find((m) => m.role === "user");
-  if (!firstUserMsg) return null;
-  const textPart = firstUserMsg.parts.find((p) => p.type === "text");
-  if (!textPart || textPart.type !== "text") return null;
-  const text = textPart.text.trim();
-  return text.length > 40 ? `${text.slice(0, 37)}...` : text;
-}
-
-export async function saveSession(sessionId: string, messages: ChatMessage[]): Promise<void> {
-  console.log("[DB] saveSession:", sessionId, "messages:", messages.length);
+export async function saveSession(sessionId: string, agentMessages: AgentMessage[]): Promise<void> {
+  console.log("[DB] saveSession:", sessionId, "agentMessages:", agentMessages.length);
   const session = await db.sessions.get(sessionId);
   if (!session) {
     console.error("[DB] Session not found for save:", sessionId);
@@ -112,12 +133,12 @@ export async function saveSession(sessionId: string, messages: ChatMessage[]): P
   }
   let name = session.name;
   if (name === "New Chat") {
-    const derivedName = deriveSessionName(messages);
+    const derivedName = deriveSessionName(agentMessages);
     if (derivedName) name = derivedName;
   }
   await db.sessions.put({
     ...session,
-    messages,
+    agentMessages,
     name,
     updatedAt: Date.now(),
   });
@@ -138,7 +159,9 @@ export async function deleteSession(sessionId: string): Promise<void> {
 export async function getOrCreateCurrentSession(workbookId: string): Promise<ChatSession> {
   const sessions = await listSessions(workbookId);
   if (sessions.length > 0) {
-    return sessions[0];
+    const session = sessions[0];
+    if (!session.agentMessages) session.agentMessages = [];
+    return session;
   }
   return createSession(workbookId);
 }

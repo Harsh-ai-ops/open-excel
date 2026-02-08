@@ -1,9 +1,4 @@
-import {
-  Agent,
-  type AgentEvent,
-  type AgentMessage,
-  type ThinkingLevel as AgentThinkingLevel,
-} from "@mariozechner/pi-agent-core";
+import { Agent, type AgentEvent, type ThinkingLevel as AgentThinkingLevel } from "@mariozechner/pi-agent-core";
 import {
   type AssistantMessage,
   getModel,
@@ -11,12 +6,19 @@ import {
   getProviders,
   type Model,
   streamSimple,
-  type Usage,
 } from "@mariozechner/pi-ai";
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { DirtyRange } from "../../../lib/dirty-tracker";
 import { getWorkbookMetadata, navigateTo } from "../../../lib/excel/api";
+import {
+  agentMessagesToChatMessages,
+  type ChatMessage,
+  deriveStats,
+  extractPartsFromAssistantMessage,
+  generateId,
+  type SessionStats,
+} from "../../../lib/message-utils";
 import { loadOAuthCredentials, refreshOAuthToken, saveOAuthCredentials } from "../../../lib/oauth";
 import {
   applyProxyToModel,
@@ -49,38 +51,8 @@ import {
 import { EXCEL_TOOLS } from "../../../lib/tools";
 import { deleteFile, listUploads, resetVfs, restoreVfs, snapshotVfs, writeFile } from "../../../lib/vfs";
 
+export type { ChatMessage, MessagePart, SessionStats, ToolCallStatus } from "../../../lib/message-utils";
 export type { ProviderConfig, ThinkingLevel };
-
-export type ToolCallStatus = "pending" | "running" | "complete" | "error";
-
-export type MessagePart =
-  | { type: "text"; text: string }
-  | { type: "thinking"; thinking: string }
-  | {
-      type: "toolCall";
-      id: string;
-      name: string;
-      args: Record<string, unknown>;
-      status: ToolCallStatus;
-      result?: string;
-    };
-
-export interface ChatMessage {
-  id: string;
-  role: "user" | "assistant";
-  parts: MessagePart[];
-  timestamp: number;
-}
-
-export interface SessionStats {
-  inputTokens: number;
-  outputTokens: number;
-  cacheRead: number;
-  cacheWrite: number;
-  totalCost: number;
-  contextWindow: number;
-  lastUsage: Usage | null;
-}
 
 function parseDirtyRanges(result: string | undefined): DirtyRange[] | null {
   if (!result) return null;
@@ -114,15 +86,7 @@ interface ChatState {
   skills: SkillMeta[];
 }
 
-const INITIAL_STATS: SessionStats = {
-  inputTokens: 0,
-  outputTokens: 0,
-  cacheRead: 0,
-  cacheWrite: 0,
-  totalCost: 0,
-  contextWindow: 0,
-  lastUsage: null,
-};
+const INITIAL_STATS: SessionStats = { ...deriveStats([]), contextWindow: 0 };
 
 interface ChatContextValue {
   state: ChatState;
@@ -202,42 +166,8 @@ ${buildSkillsPromptSection(skills)}
 `;
 }
 
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
 function thinkingLevelToAgent(level: ThinkingLevel): AgentThinkingLevel {
   return level === "none" ? "off" : level;
-}
-
-function extractPartsFromAssistantMessage(message: AgentMessage, existingParts: MessagePart[] = []): MessagePart[] {
-  if (message.role !== "assistant") return existingParts;
-
-  const assistantMsg = message as AssistantMessage;
-  const existingToolCalls = new Map<string, MessagePart>();
-  for (const part of existingParts) {
-    if (part.type === "toolCall") {
-      existingToolCalls.set(part.id, part);
-    }
-  }
-
-  return assistantMsg.content.map((block): MessagePart => {
-    if (block.type === "text") {
-      return { type: "text", text: block.text };
-    }
-    if (block.type === "thinking") {
-      return { type: "thinking", thinking: block.thinking };
-    }
-    const existing = existingToolCalls.get(block.id);
-    return {
-      type: "toolCall",
-      id: block.id,
-      name: block.name,
-      args: block.arguments as Record<string, unknown>,
-      status: existing?.type === "toolCall" ? existing.status : "pending",
-      result: existing?.type === "toolCall" ? existing.result : undefined,
-    };
-  });
 }
 
 export function ChatProvider({ children }: { children: ReactNode }) {
@@ -342,13 +272,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               sessionStats: isError
                 ? prev.sessionStats
                 : {
-                    inputTokens: prev.sessionStats.inputTokens + assistantMsg.usage.input,
-                    outputTokens: prev.sessionStats.outputTokens + assistantMsg.usage.output,
-                    cacheRead: prev.sessionStats.cacheRead + assistantMsg.usage.cacheRead,
-                    cacheWrite: prev.sessionStats.cacheWrite + assistantMsg.usage.cacheWrite,
-                    totalCost: prev.sessionStats.totalCost + assistantMsg.usage.cost.total,
+                    ...deriveStats(agentRef.current?.state.messages ?? []),
                     contextWindow: prev.sessionStats.contextWindow,
-                    lastUsage: assistantMsg.usage,
                   },
             };
           });
@@ -676,7 +601,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const sessions = await listSessions(workbookIdRef.current);
     console.log(
       "[Chat] refreshSessions:",
-      sessions.map((s) => ({ id: s.id, name: s.name, msgs: s.messages.length })),
+      sessions.map((s) => ({ id: s.id, name: s.name, msgs: (s.agentMessages ?? []).length })),
     );
     setState((prev) => ({ ...prev, sessions }));
   }, []);
@@ -722,11 +647,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     try {
       const [session, vfsFiles] = await Promise.all([getSession(sessionId), loadVfsFiles(sessionId)]);
       console.log(
-        "[Chat] Got session:",
+        "[Chat] switchSession loaded:",
         session?.id,
-        "messages:",
-        session?.messages.length,
-        "vfs files:",
+        "agentMessages:",
+        session?.agentMessages.length,
+        "vfs:",
         vfsFiles.length,
       );
       if (!session) {
@@ -735,13 +660,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }
       await restoreVfs(vfsFiles);
       currentSessionIdRef.current = session.id;
+
+      if (session.agentMessages.length > 0 && agentRef.current) {
+        agentRef.current.replaceMessages(session.agentMessages);
+      }
+
       const uploadNames = await listUploads();
+      const stats = deriveStats(session.agentMessages);
       setState((prev) => ({
         ...prev,
-        messages: session.messages,
+        messages: agentMessagesToChatMessages(session.agentMessages),
         currentSession: session,
         error: null,
-        sessionStats: INITIAL_STATS,
+        sessionStats: { ...stats, contextWindow: prev.sessionStats.contextWindow },
         uploads: uploadNames.map((name) => ({ name, size: 0 })),
       }));
     } catch (err) {
@@ -760,17 +691,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     await Promise.all([deleteSession(deletedId), saveVfsFiles(deletedId, [])]);
     const session = await getOrCreateCurrentSession(workbookIdRef.current);
     currentSessionIdRef.current = session.id;
-    // Restore VFS for the session we're switching to
     const vfsFiles = await loadVfsFiles(session.id);
     await restoreVfs(vfsFiles);
+
+    if (session.agentMessages.length > 0 && agentRef.current) {
+      agentRef.current.replaceMessages(session.agentMessages);
+    }
+
     await refreshSessions();
     const uploadNames = await listUploads();
+    const stats = deriveStats(session.agentMessages);
     setState((prev) => ({
       ...prev,
-      messages: session.messages,
+      messages: agentMessagesToChatMessages(session.agentMessages),
       currentSession: session,
       error: null,
-      sessionStats: INITIAL_STATS,
+      sessionStats: { ...stats, contextWindow: prev.sessionStats.contextWindow },
       uploads: uploadNames.map((name) => ({ name, size: 0 })),
     }));
   }, [refreshSessions]);
@@ -779,12 +715,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (prevStreamingRef.current && !state.isStreaming && currentSessionIdRef.current) {
       const sessionId = currentSessionIdRef.current;
+      const agentMessages = agentRef.current?.state.messages ?? [];
       // Snapshot VFS first (returns native Promise), then pass result to Dexie.
       // Never nest Dexie calls inside non-Dexie .then() — breaks PSD zone tracking in Office SES sandbox.
       (async () => {
         try {
           const vfsFiles = await snapshotVfs();
-          await Promise.all([saveSession(sessionId, state.messages), saveVfsFiles(sessionId, vfsFiles)]);
+          await Promise.all([saveSession(sessionId, agentMessages), saveVfsFiles(sessionId, vfsFiles)]);
           await refreshSessions();
           const updated = await getSession(sessionId);
           if (updated) {
@@ -796,7 +733,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       })();
     }
     prevStreamingRef.current = state.isStreaming;
-  }, [state.isStreaming, state.messages, refreshSessions]);
+  }, [state.isStreaming, refreshSessions]);
 
   useEffect(() => {
     return () => {
@@ -836,22 +773,29 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         if (vfsFiles.length > 0) {
           await restoreVfs(vfsFiles);
         }
+
+        if (session.agentMessages.length > 0 && agentRef.current) {
+          agentRef.current.replaceMessages(session.agentMessages);
+          console.log("[Chat] Restored", session.agentMessages.length, "agent messages from DB");
+        }
+
         const uploadNames = await listUploads();
+        const stats = deriveStats(session.agentMessages);
         console.log(
           "[Chat] Loaded session:",
           session.id,
-          "with",
-          session.messages.length,
-          "messages,",
+          "agentMessages:",
+          session.agentMessages.length,
+          "vfs:",
           vfsFiles.length,
-          "vfs files",
         );
         setState((prev) => ({
           ...prev,
-          messages: session.messages,
+          messages: agentMessagesToChatMessages(session.agentMessages),
           currentSession: session,
           sessions,
           skills,
+          sessionStats: { ...stats, contextWindow: prev.sessionStats.contextWindow },
           uploads: uploadNames.map((name) => ({ name, size: 0 })),
         }));
       })
