@@ -13,6 +13,8 @@
   },
   "scripts": {
     "build": "vite build",
+    "predeploy": "npm run build",
+    "deploy-gh": "gh-pages -d dist",
     "deploy": "pnpm build && pnpm dlx wrangler pages deploy dist --project-name openexcel",
     "build:dev": "vite build --mode development",
     "dev-server": "vite --mode development",

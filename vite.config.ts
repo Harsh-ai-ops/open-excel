@@ -26,9 +26,10 @@ async function getHttpsOptions() {
 export default defineConfig(async ({ mode }) => {
   const dev = mode === "development";
   const urlDev = "https://localhost:3000/";
-  const urlProd = "https://openexcel.pages.dev/";
+  const urlProd = "https://harsh-ai-ops.github.io/open-excel/";
 
   return {
+    base: mode === "production" ? "/open-excel/" : "/",
     root: "src",
     publicDir: "../public",
 
