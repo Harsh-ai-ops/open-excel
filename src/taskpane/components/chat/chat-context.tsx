@@ -12,6 +12,7 @@ import {
   streamSimple,
 } from "@mariozechner/pi-ai";
 import type { ReactNode } from "react";
+import { OPENROUTER_FREE_MODELS } from "../../../lib/openrouter-models";
 import {
   createContext,
   useCallback,
@@ -232,7 +233,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const getModelsForProvider = useCallback((provider: string): Model<any>[] => {
     try {
-      return getModels(provider as any);
+      const models = getModels(provider as any);
+      if (provider === "openrouter") {
+        const existingIds = new Set(models.map((m) => m.id));
+        const freeModels = OPENROUTER_FREE_MODELS.filter(
+          (m) => !existingIds.has(m.id),
+        );
+        return [...models, ...freeModels].sort((a, b) =>
+          a.name.localeCompare(b.name),
+        );
+      }
+      return models;
     } catch {
       return [];
     }
@@ -323,9 +334,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               sessionStats: isError
                 ? prev.sessionStats
                 : {
-                    ...deriveStats(agentRef.current?.state.messages ?? []),
-                    contextWindow: prev.sessionStats.contextWindow,
-                  },
+                  ...deriveStats(agentRef.current?.state.messages ?? []),
+                  contextWindow: prev.sessionStats.contextWindow,
+                },
             };
           });
           streamingMessageIdRef.current = null;
