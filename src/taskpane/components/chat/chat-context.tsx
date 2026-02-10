@@ -12,7 +12,6 @@ import {
   streamSimple,
 } from "@mariozechner/pi-ai";
 import type { ReactNode } from "react";
-import { OPENROUTER_FREE_MODELS } from "../../../lib/openrouter-models";
 import {
   createContext,
   useCallback,
@@ -36,6 +35,7 @@ import {
   refreshOAuthToken,
   saveOAuthCredentials,
 } from "../../../lib/oauth";
+import { OPENROUTER_FREE_MODELS } from "../../../lib/openrouter-models";
 import {
   applyProxyToModel,
   buildCustomModel,
@@ -334,9 +334,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               sessionStats: isError
                 ? prev.sessionStats
                 : {
-                  ...deriveStats(agentRef.current?.state.messages ?? []),
-                  contextWindow: prev.sessionStats.contextWindow,
-                },
+                    ...deriveStats(agentRef.current?.state.messages ?? []),
+                    contextWindow: prev.sessionStats.contextWindow,
+                  },
             };
           });
           streamingMessageIdRef.current = null;

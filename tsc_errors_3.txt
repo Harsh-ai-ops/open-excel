@@ -1,0 +1,547 @@
+[96msrc/lib/openrouter-models.ts[0m:[93m4[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m  4[0m   {
+[7m   [0m [91m  ~[0m
+[7m  5[0m     id: "openrouter/aurora-alpha",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m 18[0m     maxTokens: 50000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m 19[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m20[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m 20[0m   {
+[7m   [0m [91m  ~[0m
+[7m 21[0m     id: "openrouter/pony-alpha",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m 34[0m     maxTokens: 131000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m 35[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m36[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: ("text" | "image")[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m 36[0m   {
+[7m   [0m [91m  ~[0m
+[7m 37[0m     id: "openrouter/free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m 50[0m     maxTokens: 32000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m 51[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m52[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m 52[0m   {
+[7m   [0m [91m  ~[0m
+[7m 53[0m     id: "stepfun/step-3.5-flash:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m 66[0m     maxTokens: 256000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m 67[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m68[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m 68[0m   {
+[7m   [0m [91m  ~[0m
+[7m 69[0m     id: "arcee-ai/trinity-large-preview:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m 82[0m     maxTokens: 32000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m 83[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m84[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m 84[0m   {
+[7m   [0m [91m  ~[0m
+[7m 85[0m     id: "upstage/solar-pro-3:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m 98[0m     maxTokens: 32000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m 99[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m100[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m100[0m   {
+[7m   [0m [91m  ~[0m
+[7m101[0m     id: "liquid/lfm-2.5-1.2b-thinking:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m114[0m     maxTokens: 32000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m115[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m116[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: false; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m116[0m   {
+[7m   [0m [91m  ~[0m
+[7m117[0m     id: "liquid/lfm-2.5-1.2b-instruct:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m130[0m     maxTokens: 32000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m131[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m132[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m132[0m   {
+[7m   [0m [91m  ~[0m
+[7m133[0m     id: "nvidia/nemotron-3-nano-30b-a3b:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m146[0m     maxTokens: 32000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m147[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m148[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m148[0m   {
+[7m   [0m [91m  ~[0m
+[7m149[0m     id: "arcee-ai/trinity-mini:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m162[0m     maxTokens: 32000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m163[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m164[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m164[0m   {
+[7m   [0m [91m  ~[0m
+[7m165[0m     id: "tngtech/tng-r1t-chimera:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m178[0m     maxTokens: 65536,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m179[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m180[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: ("text" | "image")[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m180[0m   {
+[7m   [0m [91m  ~[0m
+[7m181[0m     id: "nvidia/nemotron-nano-12b-v2-vl:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m194[0m     maxTokens: 128000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m195[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m196[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m196[0m   {
+[7m   [0m [91m  ~[0m
+[7m197[0m     id: "qwen/qwen3-next-80b-a3b-instruct:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m210[0m     maxTokens: 32000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m211[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m212[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m212[0m   {
+[7m   [0m [91m  ~[0m
+[7m213[0m     id: "nvidia/nemotron-nano-9b-v2:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m226[0m     maxTokens: 32000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m227[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m228[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m228[0m   {
+[7m   [0m [91m  ~[0m
+[7m229[0m     id: "openai/gpt-oss-120b:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m242[0m     maxTokens: 131072,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m243[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m244[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m244[0m   {
+[7m   [0m [91m  ~[0m
+[7m245[0m     id: "openai/gpt-oss-20b:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m258[0m     maxTokens: 131072,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m259[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m260[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m260[0m   {
+[7m   [0m [91m  ~[0m
+[7m261[0m     id: "z-ai/glm-4.5-air:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m274[0m     maxTokens: 96000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m275[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m276[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m276[0m   {
+[7m   [0m [91m  ~[0m
+[7m277[0m     id: "qwen/qwen3-coder:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m290[0m     maxTokens: 262000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m291[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m292[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: false; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m292[0m   {
+[7m   [0m [91m  ~[0m
+[7m293[0m     id: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m306[0m     maxTokens: 32000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m307[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m308[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m308[0m   {
+[7m   [0m [91m  ~[0m
+[7m309[0m     id: "google/gemma-3n-e2b-it:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m322[0m     maxTokens: 2048,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~[0m
+[7m323[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m324[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m324[0m   {
+[7m   [0m [91m  ~[0m
+[7m325[0m     id: "tngtech/deepseek-r1t2-chimera:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m338[0m     maxTokens: 32000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m339[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m340[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m340[0m   {
+[7m   [0m [91m  ~[0m
+[7m341[0m     id: "deepseek/deepseek-r1-0528:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m354[0m     maxTokens: 163840,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m355[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m356[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: false; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m356[0m   {
+[7m   [0m [91m  ~[0m
+[7m357[0m     id: "google/gemma-3n-e4b-it:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m370[0m     maxTokens: 2048,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~[0m
+[7m371[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m372[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m372[0m   {
+[7m   [0m [91m  ~[0m
+[7m373[0m     id: "qwen/qwen3-4b:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m386[0m     maxTokens: 32000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m387[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m388[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m388[0m   {
+[7m   [0m [91m  ~[0m
+[7m389[0m     id: "tngtech/deepseek-r1t-chimera:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m402[0m     maxTokens: 32000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m403[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m404[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: ("text" | "image")[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m404[0m   {
+[7m   [0m [91m  ~[0m
+[7m405[0m     id: "mistralai/mistral-small-3.1-24b-instruct:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m418[0m     maxTokens: 32000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m419[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m420[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: ("text" | "image")[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m420[0m   {
+[7m   [0m [91m  ~[0m
+[7m421[0m     id: "google/gemma-3-4b-it:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m434[0m     maxTokens: 8192,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~[0m
+[7m435[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m436[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: ("text" | "image")[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m436[0m   {
+[7m   [0m [91m  ~[0m
+[7m437[0m     id: "google/gemma-3-12b-it:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m450[0m     maxTokens: 8192,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~[0m
+[7m451[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m452[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: ("text" | "image")[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m452[0m   {
+[7m   [0m [91m  ~[0m
+[7m453[0m     id: "google/gemma-3-27b-it:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m466[0m     maxTokens: 8192,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~[0m
+[7m467[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m468[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: false; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m468[0m   {
+[7m   [0m [91m  ~[0m
+[7m469[0m     id: "meta-llama/llama-3.3-70b-instruct:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m482[0m     maxTokens: 128000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m483[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m484[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m484[0m   {
+[7m   [0m [91m  ~[0m
+[7m485[0m     id: "meta-llama/llama-3.2-3b-instruct:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m498[0m     maxTokens: 32000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m499[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+[96msrc/lib/openrouter-models.ts[0m:[93m500[0m:[93m3[0m - [91merror[0m[90m TS2741: [0mProperty 'baseUrl' is missing in type '{ id: string; name: string; api: string; provider: string; reasoning: true; input: "text"[]; cost: { input: number; output: number; cacheRead: number; cacheWrite: number; }; contextWindow: number; maxTokens: number; }' but required in type 'Model<any>'.
+
+[7m500[0m   {
+[7m   [0m [91m  ~[0m
+[7m501[0m     id: "nousresearch/hermes-3-llama-3.1-405b:free",
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m514[0m     maxTokens: 32000,
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~[0m
+[7m515[0m   },
+[7m   [0m [91m~~~[0m
+
+  [96mnode_modules/.pnpm/@mariozechner+pi-ai@0.52.7_ws@8.19.0_zod@3.25.76/node_modules/@mariozechner/pi-ai/dist/types.d.ts[0m:[93m248[0m:[93m5[0m
+    [7m248[0m     baseUrl: string;
+    [7m   [0m [96m    ~~~~~~~[0m
+    'baseUrl' is declared here.
+
+
+Found 32 errors in the same file, starting at: src/lib/openrouter-models.ts[90m:4[0m
+
